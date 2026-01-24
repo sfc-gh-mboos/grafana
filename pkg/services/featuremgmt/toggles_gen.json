@@ -3396,6 +3396,20 @@
     },
     {
       "metadata": {
+        "name": "playlistUseNavigate",
+        "resourceVersion": "1769024225499",
+        "creationTimestamp": "2026-01-21T19:37:05Z"
+      },
+      "spec": {
+        "description": "Use React Router useNavigate hook for playlist page navigation",
+        "stage": "experimental",
+        "codeowner": "@grafana/grafana-frontend-platform",
+        "frontend": true,
+        "expression": "false"
+      }
+    },
+    {
+      "metadata": {
         "name": "playlistsReconciler",
         "resourceVersion": "1768498862515",
         "creationTimestamp": "2024-12-20T03:09:31Z",

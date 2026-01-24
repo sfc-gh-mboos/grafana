@@ -60,6 +60,12 @@ const getStyles = (theme: GrafanaTheme2) => ({
     gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
     gridAutoRows: '138px',
     padding: theme.spacing(2, 0),
+    '& > *': {
+      backgroundColor: 'orange',
+      '&:hover': {
+        backgroundColor: 'orange',
+      },
+    },
   }),
 });
 
