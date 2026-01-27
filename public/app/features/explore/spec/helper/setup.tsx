@@ -7,7 +7,8 @@ import { stringify } from 'querystring';
 import { ComponentType, ReactNode } from 'react';
 import { Provider } from 'react-redux';
 // eslint-disable-next-line no-restricted-imports
-import { Route, Router } from 'react-router-dom';
+import { Router } from 'react-router-dom';
+import { CompatRouter, Route, Routes, useLocation } from 'react-router-dom-v5-compat';
 import { of } from 'rxjs';
 import { getGrafanaContextMock } from 'test/mocks/getGrafanaContextMock';
 
@@ -75,6 +76,13 @@ type SetupOptions = {
 type TearDownOptions = {
   clearLocalStorage?: boolean;
 };
+
+const exploreRoute = { component: ExplorePage, path: '/explore' };
+
+function ExploreRoute() {
+  const location = useLocation();
+  return <GrafanaRoute route={exploreRoute} location={location} />;
+}
 
 export function setupExplore(options?: SetupOptions): {
   datasources: { [uid: string]: DataSourceApi };
@@ -195,33 +203,29 @@ export function setupExplore(options?: SetupOptions): {
       return children;
     });
 
+  const exploreRoutes = (
+    <Routes>
+      <Route path="/explore" element={<ExploreRoute />} />
+    </Routes>
+  );
+
   const { unmount, container } = render(
     <Provider store={storeState}>
       <GrafanaContext.Provider value={contextMock}>
         <Router history={history}>
-          <QueriesDrawerContextProvider>
-            <FinalProvider>
-              {options?.withAppChrome ? (
-                <KBarProvider>
-                  <AppChrome>
-                    <Route
-                      path="/explore"
-                      exact
-                      render={(props) => (
-                        <GrafanaRoute {...props} route={{ component: ExplorePage, path: '/explore' }} />
-                      )}
-                    />
-                  </AppChrome>
-                </KBarProvider>
-              ) : (
-                <Route
-                  path="/explore"
-                  exact
-                  render={(props) => <GrafanaRoute {...props} route={{ component: ExplorePage, path: '/explore' }} />}
-                />
-              )}
-            </FinalProvider>
-          </QueriesDrawerContextProvider>
+          <CompatRouter>
+            <QueriesDrawerContextProvider>
+              <FinalProvider>
+                {options?.withAppChrome ? (
+                  <KBarProvider>
+                    <AppChrome>{exploreRoutes}</AppChrome>
+                  </KBarProvider>
+                ) : (
+                  exploreRoutes
+                )}
+              </FinalProvider>
+            </QueriesDrawerContextProvider>
+          </CompatRouter>
         </Router>
       </GrafanaContext.Provider>
     </Provider>
