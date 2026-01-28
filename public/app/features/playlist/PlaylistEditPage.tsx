@@ -1,8 +1,8 @@
-import { useParams } from 'react-router-dom-v5-compat';
+import { useNavigate, useParams } from 'react-router-dom-v5-compat';
 
 import { NavModelItem } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
-import { locationService } from '@grafana/runtime';
+import { config, locationService } from '@grafana/runtime';
 import { Page } from 'app/core/components/Page/Page';
 
 import { Playlist, useGetPlaylistQuery, useReplacePlaylistMutation } from '../../api/clients/playlist/v0alpha1';
@@ -15,6 +15,7 @@ export interface RouteParams {
 
 export const PlaylistEditPage = () => {
   const { uid = '' } = useParams();
+  const navigate = useNavigate();
   const { data, isLoading, isError, error } = useGetPlaylistQuery({ name: uid });
   const [replacePlaylist] = useReplacePlaylistMutation();
 
@@ -23,7 +24,11 @@ export const PlaylistEditPage = () => {
       name: playlist.metadata?.name ?? '',
       playlist,
     });
-    locationService.push('/playlists');
+    if (config.featureToggles.playlistUseNavigate) {
+      navigate('/playlists');
+    } else {
+      locationService.push('/playlists');
+    }
   };
 
   const pageNav: NavModelItem = {

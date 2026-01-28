@@ -10,6 +10,7 @@ interface Props {
   url: string;
   category?: string;
   onClick?: (event?: React.MouseEvent) => void;
+  className?: string;
 }
 
 const CATEGORY_STYLES = ['primary', 'secondary', 'success', 'warning', 'error'] as const;
@@ -19,13 +20,13 @@ function isCategoryStyle(cat: string): cat is CategoryStyle {
   return CATEGORY_STYLES.some((style) => style === cat);
 }
 
-export function NavLandingPageCard({ description, text, url, category, onClick }: Props) {
+export function NavLandingPageCard({ description, text, url, category, onClick, className }: Props) {
   const styles = useStyles2(getStyles);
 
   const categoryClass = category && isCategoryStyle(category) ? styles[category] : undefined;
 
   return (
-    <Card noMargin className={cx(styles.card, categoryClass)} href={url} onClick={onClick}>
+    <Card noMargin className={cx(styles.card, categoryClass, className)} href={url} onClick={onClick}>
       <Card.Heading>{text}</Card.Heading>
       <Card.Description className={styles.description}>{description}</Card.Description>
     </Card>
