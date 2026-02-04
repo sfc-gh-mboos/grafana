@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState, type JSX } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 
+import { useCreateServiceAccountMutation, useUpdateServiceAccountMutation } from '@grafana/api-clients/rtkq/legacy';
 import { OrgRole } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
-import { config, getBackendSrv, locationService } from '@grafana/runtime';
+import { config, locationService } from '@grafana/runtime';
 import { Button, Input, Field, FieldSet } from '@grafana/ui';
 import { Form } from 'app/core/components/Form/Form';
 import { Page } from 'app/core/components/Page/Page';
@@ -17,15 +18,6 @@ import { ServiceAccountDTO, ServiceAccountCreateApiResponse } from 'app/types/se
 import { OrgRolePicker } from '../admin/OrgRolePicker';
 
 export interface Props {}
-
-const createServiceAccount = async (sa: ServiceAccountDTO) => {
-  const result = await getBackendSrv().post('/api/serviceaccounts/', sa);
-  await contextSrv.fetchUserPermissions();
-  return result;
-};
-
-const updateServiceAccount = async (uid: string, sa: ServiceAccountDTO) =>
-  getBackendSrv().patch(`/api/serviceaccounts/${uid}`, sa);
 
 const defaultServiceAccount = {
   id: 0,
@@ -43,6 +35,8 @@ const defaultServiceAccount = {
 export const ServiceAccountCreatePage = ({}: Props): JSX.Element => {
   const [roleOptions, setRoleOptions] = useState<Role[]>([]);
   const [pendingRoles, setPendingRoles] = useState<Role[]>([]);
+  const [createServiceAccount] = useCreateServiceAccountMutation();
+  const [updateServiceAccount] = useUpdateServiceAccountMutation();
 
   const methods = useForm({
     defaultValues: {
@@ -78,34 +72,28 @@ export const ServiceAccountCreatePage = ({}: Props): JSX.Element => {
 
   const onSubmit = useCallback(
     async (data: ServiceAccountDTO) => {
-      data.role = serviceAccount.role;
-      const response = await createServiceAccount(data);
+      const createForm = { name: data.name, role: serviceAccount.role };
+      const response = (await createServiceAccount({ createServiceAccountForm: createForm }).unwrap()) as
+        ServiceAccountCreateApiResponse;
+      await contextSrv.fetchUserPermissions();
       try {
-        const newAccount: ServiceAccountCreateApiResponse = {
-          avatarUrl: response.avatarUrl,
-          id: response.id,
-          uid: response.uid,
-          isDisabled: response.isDisabled,
-          login: response.login,
-          name: response.name,
-          orgId: response.orgId,
-          role: response.role,
-          tokens: response.tokens,
-        };
-        await updateServiceAccount(newAccount.uid, data);
+        await updateServiceAccount({
+          serviceAccountId: response.id,
+          updateServiceAccountForm: createForm,
+        }).unwrap();
         if (
           contextSrv.licensedAccessControlEnabled() &&
           contextSrv.hasPermission(AccessControlAction.ActionUserRolesAdd) &&
           contextSrv.hasPermission(AccessControlAction.ActionUserRolesRemove)
         ) {
-          await updateUserRoles(pendingRoles, newAccount.id, newAccount.orgId);
+          await updateUserRoles(pendingRoles, response.id, response.orgId);
         }
       } catch (e) {
         console.error(e); // TODO: handle error
       }
       locationService.push(`/org/serviceaccounts/${response.uid}`);
     },
-    [serviceAccount.role, pendingRoles]
+    [createServiceAccount, updateServiceAccount, serviceAccount.role, pendingRoles]
   );
 
   const onRoleChange = (role: OrgRole) => {

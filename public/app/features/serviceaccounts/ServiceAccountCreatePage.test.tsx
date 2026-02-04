@@ -4,17 +4,17 @@ import { TestProvider } from 'test/helpers/TestProvider';
 
 import { ServiceAccountCreatePage, Props } from './ServiceAccountCreatePage';
 
-const postMock = jest.fn().mockResolvedValue({});
-const patchMock = jest.fn().mockResolvedValue({});
-const putMock = jest.fn().mockResolvedValue({});
+const createServiceAccountMock = jest.fn();
+const updateServiceAccountMock = jest.fn();
+
+jest.mock('@grafana/api-clients/rtkq/legacy', () => ({
+  ...jest.requireActual('@grafana/api-clients/rtkq/legacy'),
+  useCreateServiceAccountMutation: () => [createServiceAccountMock, {}],
+  useUpdateServiceAccountMutation: () => [updateServiceAccountMock, {}],
+}));
 
 jest.mock('@grafana/runtime', () => ({
   ...jest.requireActual('@grafana/runtime'),
-  getBackendSrv: () => ({
-    post: postMock,
-    patch: patchMock,
-    put: putMock,
-  }),
   config: {
     ...jest.requireActual('@grafana/runtime').config,
     loginError: false,
@@ -42,6 +42,31 @@ jest.mock('app/core/services/context_srv', () => ({
     fetchUserPermissions: () => Promise.resolve(),
   },
 }));
+
+const createServiceAccountResponse = {
+  avatarUrl: '',
+  id: 1,
+  uid: 'service-account-uid',
+  isDisabled: false,
+  login: 'service-account-login',
+  name: 'Data source scavenger',
+  orgId: 1,
+  role: 'Viewer',
+  tokens: 0,
+};
+
+beforeEach(() => {
+  createServiceAccountMock.mockReturnValue({
+    unwrap: () => Promise.resolve(createServiceAccountResponse),
+  });
+  updateServiceAccountMock.mockReturnValue({
+    unwrap: () => Promise.resolve({}),
+  });
+});
+
+afterEach(() => {
+  jest.clearAllMocks();
+});
 
 const setup = (propOverrides: Partial<Props>) => {
   const props: Props = {
@@ -82,9 +107,20 @@ describe('ServiceAccountCreatePage tests', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() =>
-      expect(postMock).toHaveBeenCalledWith('/api/serviceaccounts/', {
-        name: 'Data source scavenger',
-        role: 'Viewer',
+      expect(createServiceAccountMock).toHaveBeenCalledWith({
+        createServiceAccountForm: {
+          name: 'Data source scavenger',
+          role: 'Viewer',
+        },
+      })
+    );
+    await waitFor(() =>
+      expect(updateServiceAccountMock).toHaveBeenCalledWith({
+        serviceAccountId: 1,
+        updateServiceAccountForm: {
+          name: 'Data source scavenger',
+          role: 'Viewer',
+        },
       })
     );
   });
