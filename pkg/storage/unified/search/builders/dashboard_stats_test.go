@@ -20,12 +20,49 @@ func TestLoadDashboardHealthStatsFromSQL(t *testing.T) {
 	ctx := context.Background()
 	session := store.GetSqlxSession()
 
+	_, err := session.Exec(ctx, `
+CREATE TABLE IF NOT EXISTS dashboard_usage_sums (
+	dashboard_id BIGINT,
+	updated DATETIME,
+	views_last_1_days BIGINT,
+	views_last_7_days BIGINT,
+	views_last_30_days BIGINT,
+	views_total BIGINT,
+	queries_last_1_days BIGINT,
+	queries_last_7_days BIGINT,
+	queries_last_30_days BIGINT,
+	queries_total BIGINT,
+	errors_last_1_days BIGINT,
+	errors_last_7_days BIGINT,
+	errors_last_30_days BIGINT,
+	errors_total BIGINT,
+	dashboard_uid VARCHAR(40),
+	org_id BIGINT
+)
+`)
+	require.NoError(t, err)
+
+	_, err = session.Exec(ctx, `
+CREATE TABLE IF NOT EXISTS dashboard_usage_by_day (
+	dashboard_id BIGINT,
+	day DATE,
+	views BIGINT,
+	queries BIGINT,
+	errors BIGINT,
+	load_duration DOUBLE,
+	cached_queries BIGINT,
+	dashboard_uid VARCHAR(40),
+	org_id BIGINT
+)
+`)
+	require.NoError(t, err)
+
 	now := time.Now().UTC()
 	today := now.Format("2006-01-02")
 	yesterday := now.AddDate(0, 0, -1).Format("2006-01-02")
 	oldDay := now.AddDate(0, 0, -60).Format("2006-01-02")
 
-	_, err := session.Exec(ctx, `
+	_, err = session.Exec(ctx, `
 INSERT INTO dashboard_usage_sums (
 	dashboard_id, updated, views_last_1_days, views_last_7_days, views_last_30_days, views_total,
 	queries_last_1_days, queries_last_7_days, queries_last_30_days, queries_total,
