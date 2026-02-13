@@ -5,7 +5,6 @@ import { applyFieldOverrides, createTheme, DataFrame, DataFrameView, FieldType, 
 
 import { getGrafanaSearcher } from '../../service/searcher';
 import { DashboardQueryResult, QueryResponse } from '../../service/types';
-import { DashboardSearchItemType } from '../../types';
 
 import { SearchResultsTable } from './SearchResultsTable';
 
@@ -20,13 +19,17 @@ describe('SearchResultsTable', () => {
     const searchData = toDataFrame({
       name: 'A',
       fields: [
-        { name: 'kind', type: FieldType.string, config: {}, values: [DashboardSearchItemType.DashDB] },
+        { name: 'kind', type: FieldType.string, config: {}, values: ['dashboard'] },
         { name: 'uid', type: FieldType.string, config: {}, values: ['my-dashboard-1'] },
         { name: 'name', type: FieldType.string, config: {}, values: ['My dashboard 1'] },
         { name: 'panel_type', type: FieldType.string, config: {}, values: [''] },
         { name: 'url', type: FieldType.string, config: {}, values: ['/my-dashboard-1'] },
         { name: 'tags', type: FieldType.other, config: {}, values: [['foo', 'bar']] },
         { name: 'ds_uid', type: FieldType.other, config: {}, values: [''] },
+        { name: 'panel_avg_load_time_ms_last_30_days', type: FieldType.number, config: {}, values: [600] },
+        { name: 'panel_error_rate_pct_last_30_days', type: FieldType.number, config: {}, values: [1] },
+        { name: 'errors_last_30_days', type: FieldType.number, config: {}, values: [1] },
+        { name: 'queries_last_30_days', type: FieldType.number, config: {}, values: [120] },
         { name: 'location', type: FieldType.string, config: {}, values: ['/my-dashboard-1'] },
       ],
     });
@@ -86,6 +89,7 @@ describe('SearchResultsTable', () => {
       await screen.findByRole('table');
       expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Health' })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeInTheDocument();
     });
 
@@ -108,6 +112,7 @@ describe('SearchResultsTable', () => {
 
       expect(rows).toHaveLength(2);
       expect(screen.getByText('My dashboard 1')).toBeInTheDocument();
+      expect(screen.getByText('Healthy')).toBeInTheDocument();
       expect(screen.getByText('foo')).toBeInTheDocument();
       expect(screen.getByText('bar')).toBeInTheDocument();
     });

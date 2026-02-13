@@ -39,6 +39,8 @@ const DASHBOARD_ERRORS_LAST_7_DAYS = "errors_last_7_days"
 const DASHBOARD_ERRORS_LAST_30_DAYS = "errors_last_30_days"
 const DASHBOARD_ERRORS_TOTAL = "errors_total"
 const DASHBOARD_ERRORS_TODAY = "errors_today"
+const DASHBOARD_PANEL_AVG_LOAD_TIME_MS_LAST_30_DAYS = "panel_avg_load_time_ms_last_30_days"
+const DASHBOARD_PANEL_ERROR_RATE_PCT_LAST_30_DAYS = "panel_error_rate_pct_last_30_days"
 
 func DashboardBuilder(namespaced resource.NamespacedDocumentSupplier) (resource.DocumentBuilderInfo, error) {
 	fields, err := resource.NewSearchableDocumentFields([]*resourcepb.ResourceTableColumnDefinition{
@@ -110,6 +112,22 @@ func DashboardBuilder(namespaced resource.NamespacedDocumentSupplier) (resource.
 			Name:        DASHBOARD_ERRORS_TOTAL,
 			Type:        resourcepb.ResourceTableColumnDefinition_INT64,
 			Description: "Total number of errors",
+			Properties: &resourcepb.ResourceTableColumnDefinition_Properties{
+				Filterable: true,
+			},
+		},
+		{
+			Name:        DASHBOARD_PANEL_AVG_LOAD_TIME_MS_LAST_30_DAYS,
+			Type:        resourcepb.ResourceTableColumnDefinition_INT64,
+			Description: "Average panel query load duration in milliseconds over the last 30 days",
+			Properties: &resourcepb.ResourceTableColumnDefinition_Properties{
+				Filterable: true,
+			},
+		},
+		{
+			Name:        DASHBOARD_PANEL_ERROR_RATE_PCT_LAST_30_DAYS,
+			Type:        resourcepb.ResourceTableColumnDefinition_INT64,
+			Description: "Percent of panel queries that returned errors over the last 30 days",
 			Properties: &resourcepb.ResourceTableColumnDefinition_Properties{
 				Filterable: true,
 			},

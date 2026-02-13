@@ -54,6 +54,10 @@ export interface DashboardQueryResult {
   ds_uid: string[];
   isDeleted?: boolean;
   permanentlyDeleteDate?: Date;
+  panel_avg_load_time_ms_last_30_days?: number;
+  panel_error_rate_pct_last_30_days?: number;
+  errors_last_30_days?: number;
+  queries_last_30_days?: number;
 
   // debugging fields
   score: number;

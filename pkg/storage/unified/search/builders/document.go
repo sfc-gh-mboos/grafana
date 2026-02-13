@@ -22,8 +22,8 @@ func All(sql db.DB, sprinkles DashboardStats) ([]resource.DocumentBuilderInfo, e
 	dashboards, err := DashboardBuilder(func(ctx context.Context, namespace string, blob resource.BlobSupport) (resource.DocumentBuilder, error) {
 		logger := log.New("dashboard_builder", "namespace", namespace)
 		dsinfo := []*dashboard.DatasourceQueryResult{{}}
-		ns, err := claims.ParseNamespace(namespace)
-		if err != nil && sql != nil {
+		ns, nsErr := claims.ParseNamespace(namespace)
+		if nsErr == nil && sql != nil {
 			rows, err := sql.GetSqlxSession().Query(ctx, "SELECT uid,type,name,is_default FROM data_source WHERE org_id=?", ns.OrgID)
 			if err != nil {
 				return nil, err
@@ -43,12 +43,26 @@ func All(sql db.DB, sprinkles DashboardStats) ([]resource.DocumentBuilderInfo, e
 			}
 		}
 
-		var stats map[string]map[string]int64
+		stats := map[string]map[string]int64{}
+		if nsErr == nil && sql != nil {
+			usageStats, err := LoadDashboardHealthStatsFromSQL(ctx, sql, ns.OrgID)
+			if err != nil {
+				logger.Warn("Failed to load dashboard query metadata", "error", err)
+			} else {
+				stats = usageStats
+			}
+		}
+
 		if sprinkles != nil {
-			stats, err = sprinkles.GetStats(ctx, namespace)
+			sprinkleStats, err := sprinkles.GetStats(ctx, namespace)
 			if err != nil {
 				logger.Warn("Failed to get sprinkles", "error", err)
+			} else {
+				stats = mergeDashboardStats(stats, sprinkleStats)
 			}
+		}
+		if len(stats) == 0 {
+			stats = nil
 		}
 
 		return &DashboardDocumentBuilder{
@@ -121,4 +135,24 @@ func BuildSelectableFields(obj sdkResource.Object, kind sdkResource.Kind) (map[s
 		}
 	}
 	return result, nil
+}
+
+func mergeDashboardStats(dst map[string]map[string]int64, src map[string]map[string]int64) map[string]map[string]int64 {
+	if len(src) == 0 {
+		return dst
+	}
+	if dst == nil {
+		dst = make(map[string]map[string]int64, len(src))
+	}
+	for uid, values := range src {
+		target, ok := dst[uid]
+		if !ok {
+			target = make(map[string]int64, len(values))
+			dst[uid] = target
+		}
+		for key, value := range values {
+			target[key] = value
+		}
+	}
+	return dst
 }

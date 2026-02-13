@@ -60,6 +60,12 @@ export type SearchAPIResponse = {
 };
 
 const folderViewSort = 'name_sort';
+const dashboardHealthFields = [
+  'panel_avg_load_time_ms_last_30_days',
+  'panel_error_rate_pct_last_30_days',
+  'errors_last_30_days',
+  'queries_last_30_days',
+];
 
 export class UnifiedSearcher implements GrafanaSearcher {
   locationInfo: Promise<Record<string, LocationInfo>>;
@@ -323,6 +329,10 @@ export class UnifiedSearcher implements GrafanaSearcher {
       const sortField = sort.startsWith('-') ? sort.substring(1) : sort;
 
       uri += `&field=${sortField}`; // we want to the sort field to be included in the response
+    }
+
+    for (const field of dashboardHealthFields) {
+      uri += `&field=${encodeURIComponent(field)}`;
     }
 
     if (query.name?.length) {

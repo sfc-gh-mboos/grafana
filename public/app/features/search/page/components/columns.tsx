@@ -12,7 +12,7 @@ import {
 } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
 import { config, getDataSourceSrv } from '@grafana/runtime';
-import { Checkbox, Icon, IconName, TagList, Text, Tooltip } from '@grafana/ui';
+import { Badge, BadgeColor, Checkbox, Icon, IconName, TagList, Text, Tooltip } from '@grafana/ui';
 import { appEvents } from 'app/core/app_events';
 import { formatDate, formatDuration } from 'app/core/internationalization/dates';
 import { PluginIconName } from 'app/features/plugins/admin/types';
@@ -26,6 +26,7 @@ import { ExplainScorePopup } from './ExplainScorePopup';
 import { TableColumn } from './SearchResultsTable';
 
 const TYPE_COLUMN_WIDTH = 175;
+const HEALTH_COLUMN_WIDTH = 190;
 const DURATION_COLUMN_WIDTH = 200;
 const DATASOURCE_COLUMN_WIDTH = 200;
 
@@ -155,6 +156,23 @@ export const generateColumns = (
   } else {
     width = TYPE_COLUMN_WIDTH;
     columns.push(makeTypeColumn(response, access.kind, access.panel_type, width, styles));
+    availableWidth -= width;
+  }
+
+  if (!showDeletedRemaining) {
+    width = HEALTH_COLUMN_WIDTH;
+    columns.push(
+      makeHealthColumn(
+        response,
+        access.kind,
+        access.panel_avg_load_time_ms_last_30_days,
+        access.panel_error_rate_pct_last_30_days,
+        access.errors_last_30_days,
+        access.queries_last_30_days,
+        width,
+        styles
+      )
+    );
     availableWidth -= width;
   }
 
@@ -509,6 +527,139 @@ function makeTagsColumn(
     field: field,
     Header: t('search.results-table.tags-header', 'Tags'),
     width,
+  };
+}
+
+function makeHealthColumn(
+  response: QueryResponse,
+  kindField: Field<string> | undefined,
+  avgLoadTimeField: Field<number | string> | undefined,
+  errorRateField: Field<number | string> | undefined,
+  errorsField: Field<number | string> | undefined,
+  queriesField: Field<number | string> | undefined,
+  width: number,
+  styles: Record<string, string>
+): TableColumn {
+  return {
+    id: 'column-health',
+    field: avgLoadTimeField ?? errorRateField ?? errorsField ?? queriesField ?? kindField,
+    width,
+    Header: t('search.results-table.health-header', 'Health'),
+    Cell: (p) => {
+      const i = p.row.index;
+      const kind = kindField?.values[i];
+      const { key, ...cellProps } = p.cellProps;
+
+      if (!response.isItemLoaded(i)) {
+        return (
+          <div key={key} {...cellProps} className={cx(styles.cell, styles.typeCell)}>
+            <TagList.Skeleton />
+          </div>
+        );
+      }
+
+      if (!isDashboardKind(kind)) {
+        return (
+          <div key={key} {...cellProps} className={cx(styles.cell, styles.typeCell)}>
+            -
+          </div>
+        );
+      }
+
+      const queries = parseOptionalNumber(queriesField?.values[i]);
+      const errors = parseOptionalNumber(errorsField?.values[i]);
+      const errorRatePct = parseOptionalNumber(errorRateField?.values[i]);
+      const avgLoadMs = parseOptionalNumber(avgLoadTimeField?.values[i]);
+      const health = getDashboardHealthIndicator({ queries, errors, errorRatePct, avgLoadMs });
+
+      return (
+        <div key={key} {...cellProps} className={cx(styles.cell, styles.typeCell)}>
+          <Badge color={health.color} icon={health.icon} text={health.text} tooltip={health.tooltip} />
+        </div>
+      );
+    },
+  };
+}
+
+function isDashboardKind(kind?: string): boolean {
+  return kind === 'dashboard' || kind === 'dash-db';
+}
+
+function parseOptionalNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+}
+
+function getDashboardHealthIndicator({
+  queries,
+  errors,
+  errorRatePct,
+  avgLoadMs,
+}: {
+  queries?: number;
+  errors?: number;
+  errorRatePct?: number;
+  avgLoadMs?: number;
+}): { color: BadgeColor; icon: IconName; text: string; tooltip: string } {
+  const queryCount = Math.max(0, Math.round(queries ?? 0));
+  const errorCount = Math.max(0, Math.round(errors ?? 0));
+  const computedErrorRatePct = queryCount > 0 ? Math.round((errorCount * 100) / queryCount) : 0;
+  const ratePct = Math.max(0, Math.round(errorRatePct ?? computedErrorRatePct));
+  const loadMs = avgLoadMs != null ? Math.max(0, Math.round(avgLoadMs)) : undefined;
+
+  if (queryCount < 1) {
+    return {
+      color: 'darkgrey',
+      icon: 'info-circle',
+      text: t('search.dashboard-health.no-data-text', 'No data'),
+      tooltip: t('search.dashboard-health.no-data-tooltip', 'No panel query data in the last 30 days'),
+    };
+  }
+
+  const tooltip = t(
+    'search.dashboard-health.metrics-tooltip',
+    'Avg panel load: {{loadMs}} ms - Error rate: {{ratePct}}% ({{errorCount}}/{{queryCount}})',
+    {
+      loadMs: loadMs ?? 0,
+      ratePct,
+      errorCount,
+      queryCount,
+    }
+  );
+
+  if (ratePct >= 10 || (loadMs != null && loadMs >= 2000)) {
+    return {
+      color: 'red',
+      icon: 'exclamation-triangle',
+      text: t('search.dashboard-health.critical-text', 'Critical'),
+      tooltip,
+    };
+  }
+
+  if (ratePct >= 3 || (loadMs != null && loadMs >= 1000)) {
+    return {
+      color: 'orange',
+      icon: 'exclamation-triangle',
+      text: t('search.dashboard-health.degraded-text', 'Degraded'),
+      tooltip,
+    };
+  }
+
+  return {
+    color: 'green',
+    icon: 'check',
+    text: t('search.dashboard-health.healthy-text', 'Healthy'),
+    tooltip,
   };
 }
 
