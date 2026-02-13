@@ -533,10 +533,10 @@ function makeTagsColumn(
 function makeHealthColumn(
   response: QueryResponse,
   kindField: Field<string> | undefined,
-  avgLoadTimeField: Field<number | string> | undefined,
-  errorRateField: Field<number | string> | undefined,
-  errorsField: Field<number | string> | undefined,
-  queriesField: Field<number | string> | undefined,
+  avgLoadTimeField: Field<number | string | undefined> | undefined,
+  errorRateField: Field<number | string | undefined> | undefined,
+  errorsField: Field<number | string | undefined> | undefined,
+  queriesField: Field<number | string | undefined> | undefined,
   width: number,
   styles: Record<string, string>
 ): TableColumn {
