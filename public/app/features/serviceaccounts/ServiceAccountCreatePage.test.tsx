@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { config } from '@grafana/runtime';
 import { TestProvider } from 'test/helpers/TestProvider';
 
 import { ServiceAccountCreatePage, Props } from './ServiceAccountCreatePage';
@@ -7,6 +8,13 @@ import { ServiceAccountCreatePage, Props } from './ServiceAccountCreatePage';
 const postMock = jest.fn().mockResolvedValue({});
 const patchMock = jest.fn().mockResolvedValue({});
 const putMock = jest.fn().mockResolvedValue({});
+const createServiceAccountMutationMock = jest.fn();
+const updateServiceAccountMutationMock = jest.fn();
+
+jest.mock('app/api/clients/legacy', () => ({
+  useCreateServiceAccountMutation: () => [createServiceAccountMutationMock, {}],
+  useUpdateServiceAccountMutation: () => [updateServiceAccountMutationMock, {}],
+}));
 
 jest.mock('@grafana/runtime', () => ({
   ...jest.requireActual('@grafana/runtime'),
@@ -65,6 +73,13 @@ const setup = (propOverrides: Partial<Props>) => {
 };
 
 describe('ServiceAccountCreatePage tests', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    config.featureToggles.externalServiceAccounts = false;
+    createServiceAccountMutationMock.mockResolvedValue({});
+    updateServiceAccountMutationMock.mockResolvedValue({});
+  });
+
   it('Should display service account create page', () => {
     setup({});
     expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument();
@@ -87,5 +102,48 @@ describe('ServiceAccountCreatePage tests', () => {
         role: 'Viewer',
       })
     );
+  });
+
+  it('Should call RTK query mutations when feature flag is enabled', async () => {
+    config.featureToggles.externalServiceAccounts = true;
+    createServiceAccountMutationMock.mockResolvedValue({
+      data: {
+        id: 42,
+        uid: 'sauid',
+        orgId: 1,
+        name: 'Data source scavenger',
+        login: 'sauid',
+        role: 'Viewer',
+        isDisabled: false,
+        tokens: 0,
+      },
+    });
+    updateServiceAccountMutationMock.mockResolvedValue({ data: {} });
+
+    setup({});
+    await userEvent.type(screen.getByLabelText('Display name *'), 'Data source scavenger');
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(createServiceAccountMutationMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createServiceAccountForm: expect.objectContaining({
+            name: 'Data source scavenger',
+            role: 'Viewer',
+          }),
+        })
+      );
+    });
+
+    expect(updateServiceAccountMutationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        serviceAccountId: 42,
+        updateServiceAccountForm: expect.objectContaining({
+          name: 'Data source scavenger',
+          role: 'Viewer',
+        }),
+      })
+    );
+    expect(postMock).not.toHaveBeenCalled();
   });
 });
