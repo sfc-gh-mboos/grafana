@@ -1,5 +1,4 @@
 import { config, getBackendSrv } from '@grafana/runtime';
-
 import { useCreateServiceAccountMutation, useUpdateServiceAccountMutation } from 'app/api/clients/legacy';
 import { contextSrv } from 'app/core/services/context_srv';
 import { ServiceAccountCreateApiResponse, ServiceAccountDTO } from 'app/types/serviceaccount';

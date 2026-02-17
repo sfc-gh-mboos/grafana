@@ -1,7 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { config } from '@grafana/runtime';
 import { TestProvider } from 'test/helpers/TestProvider';
+
+import { config } from '@grafana/runtime';
 
 import { ServiceAccountCreatePage, Props } from './ServiceAccountCreatePage';
 
@@ -12,6 +13,7 @@ const createServiceAccountMutationMock = jest.fn();
 const updateServiceAccountMutationMock = jest.fn();
 
 jest.mock('app/api/clients/legacy', () => ({
+  ...jest.requireActual('app/api/clients/legacy'),
   useCreateServiceAccountMutation: () => [createServiceAccountMutationMock, {}],
   useUpdateServiceAccountMutation: () => [updateServiceAccountMutationMock, {}],
 }));
