@@ -790,6 +790,11 @@ export interface FeatureToggles {
   */
   playlistsReconciler?: boolean;
   /**
+  * Use React Router's useNavigate hook instead of locationService in browse dashboards pages
+  * @default false
+  */
+  browseDashboardsUseNavigate?: boolean;
+  /**
   * Enable passwordless login via magic link authentication
   * @default false
   */
