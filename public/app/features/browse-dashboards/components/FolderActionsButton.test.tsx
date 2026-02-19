@@ -1,5 +1,5 @@
-import { render, screen, userEvent } from 'test/test-utils';
 import { waitFor } from '@testing-library/react';
+import { render, screen, userEvent } from 'test/test-utils';
 
 import { appEvents } from 'app/core/app_events';
 import { ManagerKind } from 'app/features/apiserver/types';
