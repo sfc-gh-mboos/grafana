@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom-v5-compat';
 
 import { NavModelItem } from '@grafana/data';
 import { t } from '@grafana/i18n';
-import { locationService } from '@grafana/runtime';
+import { config, locationService } from '@grafana/runtime';
 import { Page } from 'app/core/components/Page/Page';
 
 import { Playlist, useCreatePlaylistMutation } from '../../api/clients/playlist/v0alpha1';
@@ -11,6 +12,7 @@ import { PlaylistForm } from './PlaylistForm';
 import { getDefaultPlaylist } from './utils';
 
 export const PlaylistNewPage = () => {
+  const navigate = useNavigate();
   const [playlist] = useState<Playlist>(getDefaultPlaylist());
   const [createPlaylist] = useCreatePlaylistMutation();
 
@@ -18,7 +20,11 @@ export const PlaylistNewPage = () => {
     await createPlaylist({
       playlist,
     });
-    locationService.push('/playlists');
+    if (config.featureToggles.playlistUseNavigate) {
+      navigate('/playlists');
+    } else {
+      locationService.push('/playlists');
+    }
   };
 
   const pageNav: NavModelItem = {

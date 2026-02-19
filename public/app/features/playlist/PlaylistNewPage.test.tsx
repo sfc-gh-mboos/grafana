@@ -4,12 +4,19 @@ import { of } from 'rxjs';
 import { TestProvider } from 'test/helpers/TestProvider';
 
 import { selectors } from '@grafana/e2e-selectors';
-import { locationService } from '@grafana/runtime';
+import { config, locationService } from '@grafana/runtime';
 
 import { createFetchResponse } from '../../../test/helpers/createFetchResponse';
 import { backendSrv } from '../../core/services/backend_srv';
 
 import { PlaylistNewPage } from './PlaylistNewPage';
+
+const mockNavigate = jest.fn();
+
+jest.mock('react-router-dom-v5-compat', () => ({
+  ...jest.requireActual('react-router-dom-v5-compat'),
+  useNavigate: () => mockNavigate,
+}));
 
 jest.mock('@grafana/runtime', () => ({
   ...jest.requireActual('@grafana/runtime'),
@@ -51,6 +58,16 @@ function getTestContext() {
 }
 
 describe('PlaylistNewPage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockNavigate.mockClear();
+    config.featureToggles.playlistUseNavigate = false;
+  });
+
+  afterEach(() => {
+    config.featureToggles.playlistUseNavigate = false;
+  });
+
   describe('when mounted', () => {
     it('then header should be correct', async () => {
       getTestContext();
@@ -84,6 +101,16 @@ describe('PlaylistNewPage', () => {
       await waitFor(() => {
         expect(locationService.getLocation().pathname).toEqual('/playlists');
       });
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it('when feature flag is enabled, should use navigate', async () => {
+      config.featureToggles.playlistUseNavigate = true;
+      getTestContext();
+
+      await userEvent.type(screen.getByRole('textbox', { name: selectors.pages.PlaylistForm.name }), 'A new name');
+      fireEvent.submit(screen.getByRole('button', { name: /save/i }));
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/playlists'));
     });
   });
 });

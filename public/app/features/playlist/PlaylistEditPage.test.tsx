@@ -3,12 +3,19 @@ import userEvent from '@testing-library/user-event';
 import { of } from 'rxjs';
 import { TestProvider } from 'test/helpers/TestProvider';
 
-import { locationService } from '@grafana/runtime';
+import { config, locationService } from '@grafana/runtime';
 import { backendSrv } from 'app/core/services/backend_srv';
 
 import { createFetchResponse } from '../../../test/helpers/createFetchResponse';
 
 import { PlaylistEditPage } from './PlaylistEditPage';
+
+const mockNavigate = jest.fn();
+
+jest.mock('react-router-dom-v5-compat', () => ({
+  ...jest.requireActual('react-router-dom-v5-compat'),
+  useNavigate: () => mockNavigate,
+}));
 
 jest.mock('@grafana/runtime', () => ({
   ...jest.requireActual('@grafana/runtime'),
@@ -50,6 +57,16 @@ async function getTestContext() {
 }
 
 describe('PlaylistEditPage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockNavigate.mockClear();
+    config.featureToggles.playlistUseNavigate = false;
+  });
+
+  afterEach(() => {
+    config.featureToggles.playlistUseNavigate = false;
+  });
+
   describe('when mounted', () => {
     it('then it should load playlist and header should be correct', async () => {
       await getTestContext();
@@ -90,6 +107,19 @@ describe('PlaylistEditPage', () => {
         )
       );
       expect(locationService.getLocation().pathname).toEqual('/playlists');
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it('when feature flag is enabled, should use navigate', async () => {
+      config.featureToggles.playlistUseNavigate = true;
+      await getTestContext();
+
+      await userEvent.clear(await screen.findByRole('textbox', { name: /playlist name/i }));
+      await userEvent.type(screen.getByRole('textbox', { name: /playlist name/i }), 'A Name');
+      await userEvent.clear(await screen.findByRole('textbox', { name: /playlist interval/i }));
+      await userEvent.type(screen.getByRole('textbox', { name: /playlist interval/i }), '10s');
+      fireEvent.submit(screen.getByRole('button', { name: /save/i }));
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/playlists'));
     });
   });
 });
