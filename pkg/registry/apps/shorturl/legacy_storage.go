@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -118,6 +120,18 @@ func (s *legacyStorage) Create(ctx context.Context,
 	cmd := &dtos.CreateShortURLCmd{
 		Path: p.Spec.Path,
 		UID:  p.Name,
+	}
+	annotations := p.GetAnnotations()
+	if ttlStr, ok := annotations[shorturl.TTLSecondsAnnotation]; ok {
+		if ttlSeconds, err := strconv.ParseInt(ttlStr, 10, 64); err == nil && ttlSeconds > 0 {
+			cmd.ExpiresInSeconds = ttlSeconds
+		}
+	} else if expiresAt, ok := shorturl.GetExpirationTimestamp(annotations, p.CreationTimestamp.Time); ok {
+		secondsUntilExpiry := expiresAt - time.Now().Unix()
+		if secondsUntilExpiry <= 0 {
+			secondsUntilExpiry = 1
+		}
+		cmd.ExpiresInSeconds = secondsUntilExpiry
 	}
 	out, err := s.service.CreateShortURL(ctx, requester, cmd)
 	if err != nil {

@@ -20,6 +20,35 @@ import (
 )
 
 func TestShortURLAPIEndpoint(t *testing.T) {
+	t.Run("Given expiresInSeconds in the request body", func(t *testing.T) {
+		cmd := dtos.CreateShortURLCmd{
+			Path:             "d/TxKARsmGz/new-dashboard?orgId=1",
+			ExpiresInSeconds: 3600,
+		}
+
+		capturedExpiresIn := int64(0)
+		service := &fakeShortURLService{
+			createShortURLFunc: func(ctx context.Context, user identity.Requester, cmd *dtos.CreateShortURLCmd) (*shorturls.ShortUrl, error) {
+				capturedExpiresIn = cmd.ExpiresInSeconds
+				return &shorturls.ShortUrl{
+					Id:    1,
+					OrgId: testOrgID,
+					Uid:   "N1u6L4eGz",
+					Path:  cmd.Path,
+				}, nil
+			},
+			createConvertShortURLToDTO: func(shortURL *shorturls.ShortUrl, appURL string) *dtos.ShortURL {
+				return &dtos.ShortURL{UID: shortURL.Uid, URL: "http://localhost:3000/goto/N1u6L4eGz?orgId=1"}
+			},
+		}
+
+		createShortURLScenario(t, "When calling POST on", "/api/short-urls", "/api/short-urls", cmd, service,
+			func(sc *scenarioContext) {
+				callCreateShortURL(sc)
+				require.Equal(t, int64(3600), capturedExpiresIn)
+			})
+	})
+
 	t.Run("Given a correct request for creating a shortUrl", func(t *testing.T) {
 		cmd := dtos.CreateShortURLCmd{
 			Path: "d/TxKARsmGz/new-dashboard?orgId=1&from=1599389322894&to=1599410922894",

@@ -10,6 +10,7 @@ export type ShareLinkConfiguration = {
   useAbsoluteTimeRange: boolean;
   useShortUrl: boolean;
   theme: string;
+  shortLinkExpiresInSeconds?: number;
 };
 
 const DEFAULT_SHARE_LINK_CONFIGURATION: ShareLinkConfiguration = {
@@ -19,6 +20,14 @@ const DEFAULT_SHARE_LINK_CONFIGURATION: ShareLinkConfiguration = {
 };
 
 export const buildShareUrl = async (dashboard: DashboardScene, panel?: VizPanel) => {
+  return await buildShareUrlWithExpiration(dashboard, panel, undefined);
+};
+
+export const buildShareUrlWithExpiration = async (
+  dashboard: DashboardScene,
+  panel?: VizPanel,
+  shortLinkExpiresInSeconds?: number
+) => {
   const { useAbsoluteTimeRange, useShortUrl, theme } = getShareLinkConfiguration();
   DashboardInteractions.shareLinkCopied({
     currentTimeRange: useAbsoluteTimeRange,
@@ -30,6 +39,7 @@ export const buildShareUrl = async (dashboard: DashboardScene, panel?: VizPanel)
     useAbsoluteTimeRange,
     theme,
     useShortUrl,
+    shortLinkExpiresInSeconds,
   });
 };
 
