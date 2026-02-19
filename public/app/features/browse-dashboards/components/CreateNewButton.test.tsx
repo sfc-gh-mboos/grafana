@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { render } from 'test/test-utils';
 
 import { config } from '@grafana/runtime';
+import { useCreateFolder } from 'app/api/clients/folder/v1beta1/hooks';
 import { ManagerKind } from 'app/features/apiserver/types';
 import { useIsProvisionedInstance } from 'app/features/provisioning/hooks/useIsProvisionedInstance';
 import { FolderDTO } from 'app/types/folders';
@@ -10,8 +11,28 @@ import { mockFolderDTO } from '../fixtures/folder.fixture';
 
 import CreateNewButton from './CreateNewButton';
 
+const mockNavigate = jest.fn();
+
+jest.mock('react-router-dom-v5-compat', () => ({
+  ...jest.requireActual('react-router-dom-v5-compat'),
+  useNavigate: () => mockNavigate,
+}));
+
+jest.mock('app/api/clients/folder/v1beta1/hooks', () => ({
+  ...jest.requireActual('app/api/clients/folder/v1beta1/hooks'),
+  useCreateFolder: jest.fn(),
+}));
+
 jest.mock('app/features/provisioning/hooks/useIsProvisionedInstance', () => ({
   useIsProvisionedInstance: jest.fn(),
+}));
+
+jest.mock('./NewFolderForm', () => ({
+  NewFolderForm: ({ onConfirm }: { onConfirm: (folderName: string) => void }) => (
+    <button type="button" onClick={() => onConfirm('My new folder')}>
+      Confirm new folder
+    </button>
+  ),
 }));
 
 jest.mock('@grafana/runtime', () => {
@@ -28,6 +49,8 @@ jest.mock('@grafana/runtime', () => {
 });
 
 const mockUseIsProvisionedInstance = useIsProvisionedInstance as jest.MockedFunction<typeof useIsProvisionedInstance>;
+const mockUseCreateFolder = useCreateFolder as jest.MockedFunction<typeof useCreateFolder>;
+const mockCreateFolder = jest.fn();
 
 const mockParentFolder = mockFolderDTO();
 
@@ -42,6 +65,9 @@ async function renderAndOpen(folder?: FolderDTO) {
 describe('NewActionsButton', () => {
   beforeEach(() => {
     mockUseIsProvisionedInstance.mockReturnValue(false);
+    mockUseCreateFolder.mockReturnValue([mockCreateFolder] as unknown as ReturnType<typeof useCreateFolder>);
+    mockCreateFolder.mockResolvedValue({});
+    mockNavigate.mockReset();
   });
   it('should display the correct urls with a given parent folder', async () => {
     await renderAndOpen(mockParentFolder);
@@ -76,6 +102,28 @@ describe('NewActionsButton', () => {
     expect(drawer).toBeInTheDocument();
     expect(within(drawer).getByRole('heading', { name: 'New folder' })).toBeInTheDocument();
     expect(within(drawer).getByText(`Location: ${mockParentFolder.title}`)).toBeInTheDocument();
+  });
+
+  it('navigates to the created folder after creating a folder', async () => {
+    mockCreateFolder.mockResolvedValue({
+      data: { url: '/dashboards/f/new-folder/my-new-folder' },
+    });
+    const { user } = render(
+      <CreateNewButton canCreateDashboard canCreateFolder parentFolder={mockParentFolder} isReadOnlyRepo={false} />
+    );
+
+    await user.click(screen.getByText('New'));
+    await user.click(screen.getByText('New folder'));
+    await user.click(screen.getByRole('button', { name: 'Confirm new folder' }));
+
+    await waitFor(() => {
+      expect(mockCreateFolder).toHaveBeenCalledWith({
+        title: 'My new folder',
+        parentUid: mockParentFolder.uid,
+        teamOwnerReferences: undefined,
+      });
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboards/f/new-folder/my-new-folder');
+    });
   });
 
   it('should only render dashboard items when folder creation is disabled', async () => {

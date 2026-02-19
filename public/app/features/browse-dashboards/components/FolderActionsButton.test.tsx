@@ -1,15 +1,35 @@
 import { render, screen, userEvent } from 'test/test-utils';
+import { waitFor } from '@testing-library/react';
 
 import { appEvents } from 'app/core/app_events';
 import { ManagerKind } from 'app/features/apiserver/types';
 import { ShowModalReactEvent } from 'app/types/events';
 
+import {
+  useDeleteFolderMutationFacade,
+  useMoveFolderMutationFacade,
+} from '../../../api/clients/folder/v1beta1/hooks';
 import { mockFolderDTO } from '../fixtures/folder.fixture';
 import * as permissions from '../permissions';
 
 import { DeleteModal } from './BrowseActions/DeleteModal';
 import { MoveModal } from './BrowseActions/MoveModal';
 import { FolderActionsButton } from './FolderActionsButton';
+
+const mockNavigate = jest.fn();
+const mockMoveFolder = jest.fn();
+const mockDeleteFolder = jest.fn();
+
+jest.mock('react-router-dom-v5-compat', () => ({
+  ...jest.requireActual('react-router-dom-v5-compat'),
+  useNavigate: () => mockNavigate,
+}));
+
+jest.mock('../../../api/clients/folder/v1beta1/hooks', () => ({
+  ...jest.requireActual('../../../api/clients/folder/v1beta1/hooks'),
+  useMoveFolderMutationFacade: jest.fn(),
+  useDeleteFolderMutationFacade: jest.fn(),
+}));
 
 // Mock out the Permissions component for now
 jest.mock('app/core/components/AccessControl/Permissions', () => ({
@@ -19,6 +39,12 @@ jest.mock('app/core/components/AccessControl/Permissions', () => ({
 const managePermissionsLabel = /Manage permissions/i;
 const moveMenuItemLabel = /Move this folder/i;
 const deleteMenuItemLabel = /Delete this folder/i;
+const mockUseMoveFolderMutationFacade = useMoveFolderMutationFacade as jest.MockedFunction<
+  typeof useMoveFolderMutationFacade
+>;
+const mockUseDeleteFolderMutationFacade = useDeleteFolderMutationFacade as jest.MockedFunction<
+  typeof useDeleteFolderMutationFacade
+>;
 
 describe('browse-dashboards FolderActionsButton', () => {
   const mockFolder = mockFolderDTO();
@@ -35,6 +61,15 @@ describe('browse-dashboards FolderActionsButton', () => {
 
   beforeEach(() => {
     jest.spyOn(permissions, 'getFolderPermissions').mockImplementation(() => mockPermissions);
+    mockUseMoveFolderMutationFacade.mockReturnValue([
+      mockMoveFolder,
+    ] as unknown as ReturnType<typeof useMoveFolderMutationFacade>);
+    mockUseDeleteFolderMutationFacade.mockReturnValue(
+      mockDeleteFolder as unknown as ReturnType<typeof useDeleteFolderMutationFacade>
+    );
+    mockDeleteFolder.mockResolvedValue({});
+    mockMoveFolder.mockResolvedValue({});
+    mockNavigate.mockReset();
   });
 
   afterEach(() => {
@@ -150,6 +185,27 @@ describe('browse-dashboards FolderActionsButton', () => {
         })
       )
     );
+  });
+
+  it('navigates to parent folder after successful delete', async () => {
+    jest.spyOn(appEvents, 'publish');
+    const folderWithParent = {
+      ...mockFolder,
+      parents: [{ uid: 'parent-folder-uid', title: 'Parent folder', url: '/dashboards/f/parent-folder-uid/parent' }],
+    };
+
+    render(<FolderActionsButton folder={folderWithParent} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Folder actions' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: deleteMenuItemLabel }));
+
+    const publishedEvent = (appEvents.publish as jest.Mock).mock.calls.at(-1)?.[0] as ShowModalReactEvent;
+    await publishedEvent.payload.props.onConfirm();
+
+    await waitFor(() => {
+      expect(mockDeleteFolder).toHaveBeenCalledWith(folderWithParent);
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboards/f/parent-folder-uid/parent');
+    });
   });
 
   // Git sync related tests
