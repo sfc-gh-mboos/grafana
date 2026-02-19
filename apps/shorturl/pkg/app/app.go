@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
 
@@ -85,6 +86,9 @@ func New(cfg app.Config) (app.App, error) {
 						info, err := client.Get(ctx, id)
 						if err != nil {
 							return err
+						}
+						if shorturlv1beta1.IsExpired(info.GetAnnotations(), info.CreationTimestamp.Time, time.Now()) {
+							return k8serrors.NewNotFound(shorturlv1beta1.ShortURLKind().GroupVersionResource().GroupResource(), id.Name)
 						}
 
 						// Update lastSeenAt in the background

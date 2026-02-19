@@ -2,6 +2,7 @@ package shorturl
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +22,10 @@ func convertToK8sResource(v *shorturls.ShortUrl, namespacer request.NamespaceMap
 	status := shorturl.ShortURLStatus{
 		LastSeenAt: v.LastSeenAt,
 	}
+	annotations := map[string]string{}
+	if v.ExpiresAt > 0 {
+		annotations[shorturl.ExpiresAtAnnotation] = strconv.FormatInt(v.ExpiresAt, 10)
+	}
 
 	// resourceVersion can't be 0, since we are using the lastSeenAt value, when it's zero we default to current time
 	resourceVersion := fmt.Sprintf("%d", v.LastSeenAt)
@@ -34,6 +39,7 @@ func convertToK8sResource(v *shorturls.ShortUrl, namespacer request.NamespaceMap
 			ResourceVersion:   resourceVersion,
 			CreationTimestamp: metav1.NewTime(time.Unix(v.CreatedAt, 0)),
 			Namespace:         namespacer(v.OrgId),
+			Annotations:       annotations,
 		},
 		Spec:   spec,
 		Status: status,
@@ -42,11 +48,18 @@ func convertToK8sResource(v *shorturls.ShortUrl, namespacer request.NamespaceMap
 }
 
 func LegacyCreateCommandToUnstructured(cmd dtos.CreateShortURLCmd) unstructured.Unstructured {
+	metadata := map[string]interface{}{
+		"name": cmd.UID,
+	}
+	if cmd.ExpiresInSeconds > 0 {
+		metadata["annotations"] = map[string]interface{}{
+			shorturl.TTLSecondsAnnotation: strconv.FormatInt(cmd.ExpiresInSeconds, 10),
+		}
+	}
+
 	obj := unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"name": cmd.UID,
-			},
+			"metadata": metadata,
 			"spec": map[string]interface{}{
 				"path": cmd.Path,
 			},
@@ -65,12 +78,15 @@ func UnstructuredToLegacyShortURLDTO(item unstructured.Unstructured, appURL stri
 }
 
 func UnstructuredToLegacyShortURL(item unstructured.Unstructured) *shorturls.ShortUrl {
-	spec := item.Object["spec"].(map[string]interface{})
-	status := item.Object["status"].(map[string]interface{})
+	path, _, _ := unstructured.NestedString(item.Object, "spec", "path")
+	lastSeenAt, _, _ := unstructured.NestedInt64(item.Object, "status", "lastSeenAt")
+	annotations, _, _ := unstructured.NestedStringMap(item.Object, "metadata", "annotations")
+	expiresAt, _ := shorturl.GetExpirationTimestamp(annotations, item.GetCreationTimestamp().Time)
 
 	return &shorturls.ShortUrl{
 		Uid:        item.GetName(),
-		Path:       spec["path"].(string),
-		LastSeenAt: status["lastSeenAt"].(int64),
+		Path:       path,
+		LastSeenAt: lastSeenAt,
+		ExpiresAt:  expiresAt,
 	}
 }

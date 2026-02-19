@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -145,6 +146,10 @@ func (sk8s *shortURLK8sHandler) getKubernetesShortURLsHandler(c *contextmodel.Re
 		sk8s.writeError(c, err)
 		return
 	}
+	if v1beta1.IsExpired(out.GetAnnotations(), out.GetCreationTimestamp().Time, time.Now()) {
+		c.JsonApiErr(http.StatusNotFound, "shorturl not found", fmt.Errorf("short URL expired"))
+		return
+	}
 
 	c.JSON(http.StatusOK, shorturl.UnstructuredToLegacyShortURL(*out))
 }
@@ -173,7 +178,15 @@ func (sk8s *shortURLK8sHandler) getKubernetesRedirectFromShortURL(c *contextmode
 		Do(c.Req.Context())
 
 	if err = result.Error(); err != nil {
-		c.JsonApiErr(500, "goto", err)
+		// Missing or expired short URLs should behave like legacy: redirect to the app root.
+		if errors.IsNotFound(err) {
+			c.Logger.Debug("Not redirecting short URL since not found", "uid", uid)
+			c.Redirect(sk8s.cfg.AppURL, http.StatusPermanentRedirect)
+			return
+		}
+
+		c.Logger.Error("Short URL redirection error", "uid", uid, "error", err)
+		c.Redirect(sk8s.cfg.AppURL, http.StatusTemporaryRedirect)
 		return
 	}
 

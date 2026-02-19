@@ -29,7 +29,16 @@ func ProvideService(db db.DB) *ShortURLService {
 }
 
 func (s ShortURLService) GetShortURLByUID(ctx context.Context, user identity.Requester, uid string) (*shorturls.ShortUrl, error) {
-	return s.SQLStore.Get(ctx, user, uid)
+	shortURL, err := s.SQLStore.Get(ctx, user, uid)
+	if err != nil {
+		return nil, err
+	}
+
+	if isShortURLExpired(shortURL, getTime()) {
+		return nil, shorturls.ErrShortURLNotFound.Errorf("short URL expired")
+	}
+
+	return shortURL, nil
 }
 
 func (s ShortURLService) UpdateLastSeenAt(ctx context.Context, shortURL *shorturls.ShortUrl) error {
@@ -48,6 +57,9 @@ func (s ShortURLService) CreateShortURL(ctx context.Context, user identity.Reque
 	}
 	if strings.Contains(relPath, "../") {
 		return nil, shorturls.ErrShortURLInvalidPath.Errorf("path cannot contain '../': %s", relPath)
+	}
+	if cmd.ExpiresInSeconds < 0 {
+		return nil, shorturls.ErrShortURLBadRequest.Errorf("expiresInSeconds must be greater than or equal to 0")
 	}
 
 	uid := cmd.UID
@@ -72,12 +84,15 @@ func (s ShortURLService) CreateShortURL(ctx context.Context, user identity.Reque
 		}
 	}
 
-	now := time.Now().Unix()
+	now := getTime().Unix()
 	shortURL := shorturls.ShortUrl{
 		OrgId:     user.GetOrgID(),
 		Uid:       uid,
 		Path:      relPath,
 		CreatedAt: now,
+	}
+	if cmd.ExpiresInSeconds > 0 {
+		shortURL.ExpiresAt = now + cmd.ExpiresInSeconds
 	}
 	shortURL.CreatedBy, _ = user.GetInternalID()
 
@@ -99,4 +114,8 @@ func (s ShortURLService) ConvertShortURLToDTO(shortURL *shorturls.ShortUrl, appU
 		UID: shortURL.Uid,
 		URL: url,
 	}
+}
+
+func isShortURLExpired(shortURL *shorturls.ShortUrl, now time.Time) bool {
+	return shortURL.ExpiresAt > 0 && shortURL.ExpiresAt <= now.Unix()
 }

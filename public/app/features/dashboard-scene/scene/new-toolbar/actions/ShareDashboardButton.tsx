@@ -1,13 +1,12 @@
 import { useCallback, useContext } from 'react';
-import { useAsyncFn } from 'react-use';
 
 import { selectors as e2eSelectors } from '@grafana/e2e-selectors';
 import { t } from '@grafana/i18n';
 import { ModalsContext } from '@grafana/ui';
 
 import { SaveBeforeShareModal } from '../../../sharing/SaveBeforeShareModal';
+import { CopyDashboardLinkModal } from '../../../sharing/ShareButton/CopyDashboardLinkModal';
 import ShareMenu from '../../../sharing/ShareButton/ShareMenu';
-import { buildShareUrl } from '../../../sharing/ShareButton/utils';
 import { DashboardInteractions } from '../../../utils/interactions';
 import { ToolbarActionProps } from '../types';
 
@@ -18,19 +17,22 @@ const newShareButtonSelector = e2eSelectors.pages.Dashboard.DashNav.newShareButt
 export const ShareDashboardButton = ({ dashboard }: ToolbarActionProps) => {
   const { showModal, hideModal } = useContext(ModalsContext);
 
-  const [_, buildUrl] = useAsyncFn(async () => {
+  const openCopyDashboardLinkModal = useCallback(() => {
     DashboardInteractions.toolbarShareClick();
-    await buildShareUrl(dashboard);
-  }, [dashboard]);
+    showModal(CopyDashboardLinkModal, {
+      dashboard,
+      onDismiss: hideModal,
+    });
+  }, [dashboard, hideModal, showModal]);
 
   const onPrimaryShareClick = useCallback(() => {
     if (dashboard.state.isEditing && dashboard.state.isDirty) {
-      showModal(SaveBeforeShareModal, { dashboard, onContinue: buildUrl, onDismiss: hideModal });
+      showModal(SaveBeforeShareModal, { dashboard, onContinue: openCopyDashboardLinkModal, onDismiss: hideModal });
       return;
     }
 
-    buildUrl();
-  }, [buildUrl, dashboard, hideModal, showModal]);
+    openCopyDashboardLinkModal();
+  }, [dashboard, hideModal, openCopyDashboardLinkModal, showModal]);
 
   return (
     <ShareExportDashboardButton

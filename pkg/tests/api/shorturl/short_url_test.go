@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -74,6 +75,34 @@ func TestShortURL(t *testing.T) {
 	}()
 	assert.Equal(t, "http://localhost:3000/explore", res.Header.Get("Location"))
 	assert.Equal(t, http.StatusFound, res.StatusCode)
+
+	// Create an expiring short URL and verify it stops redirecting after expiry.
+	res, err = c.post("/api/short-urls", bytes.NewReader([]byte(`{"path":"explore","expiresInSeconds":1}`)))
+	require.NoError(t, err)
+	defer func() {
+		_ = res.Body.Close()
+	}()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	expiringBodyRaw, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	expiringParsed := struct {
+		UID string `json:"uid"`
+	}{}
+	err = json.Unmarshal(expiringBodyRaw, &expiringParsed)
+	require.NoError(t, err)
+	require.NotEmpty(t, expiringParsed.UID)
+
+	time.Sleep(2 * time.Second)
+
+	res, err = c.get(fmt.Sprintf("/goto/%s", expiringParsed.UID))
+	require.NoError(t, err)
+	defer func() {
+		_ = res.Body.Close()
+	}()
+	assert.Equal(t, "http://localhost:3000/", res.Header.Get("Location"))
+	assert.Equal(t, http.StatusPermanentRedirect, res.StatusCode)
 
 	// If the go-to does not exist, it should redirect to the home page and return 308.
 	res, err = c.get("/goto/DoesNotExist")

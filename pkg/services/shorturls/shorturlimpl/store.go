@@ -2,6 +2,7 @@ package shorturlimpl
 
 import (
 	"context"
+	"time"
 
 	"github.com/grafana/grafana/pkg/apimachinery/identity"
 	"github.com/grafana/grafana/pkg/infra/db"
@@ -75,9 +76,15 @@ func (s sqlStore) Delete(ctx context.Context, cmd *shorturls.DeleteShortUrlComma
 
 	// Otherwise, delete all stale short URLs older than the specified time
 	return s.db.WithTransactionalDbSession(ctx, func(session *db.Session) error {
-		var rawSql = "DELETE FROM short_url WHERE created_at <= ? AND (last_seen_at IS NULL OR last_seen_at = 0)"
+		var rawSQL = `
+DELETE FROM short_url
+WHERE
+	(created_at <= ? AND (last_seen_at IS NULL OR last_seen_at = 0))
+	OR
+	(expires_at > 0 AND expires_at <= ?)
+`
 
-		if result, err := session.Exec(rawSql, cmd.OlderThan.Unix()); err != nil {
+		if result, err := session.Exec(rawSQL, cmd.OlderThan.Unix(), time.Now().Unix()); err != nil {
 			return err
 		} else if cmd.NumDeleted, err = result.RowsAffected(); err != nil {
 			return err

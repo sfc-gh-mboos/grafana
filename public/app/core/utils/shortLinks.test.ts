@@ -8,13 +8,13 @@ import { defaultStatus } from '../../../../apps/shorturl/plugin/src/generated/sh
 
 import { createShortLink, createAndCopyShortLink, getLogsPermalinkRange, buildShortUrl } from './shortLinks';
 
+const mockPost = jest.fn();
+
 jest.mock('@grafana/runtime', () => ({
   ...jest.requireActual('@grafana/runtime'),
   getBackendSrv: () => {
     return {
-      post: () => {
-        return Promise.resolve({ url: 'https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1' });
-      },
+      post: mockPost,
     };
   },
 }));
@@ -34,6 +34,7 @@ jest.mock('app/store/store', () => ({
 }));
 
 beforeEach(() => {
+  mockPost.mockResolvedValue({ url: 'https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1' });
   Object.assign(navigator, {
     clipboard: {
       write: jest.fn().mockResolvedValue(undefined),
@@ -57,6 +58,15 @@ describe('createShortLink', () => {
   it('creates short link', async () => {
     const shortUrl = await createShortLink('d/edhmipji89b0gb/welcome?orgId=1&from=now-6h&to=now&timezone=browser');
     expect(shortUrl).toBe('https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1');
+  });
+
+  it('sends expiresInSeconds when expiration is provided', async () => {
+    await createShortLink('d/edhmipji89b0gb/welcome?orgId=1', 3600);
+
+    expect(mockPost).toHaveBeenCalledWith('/api/short-urls', {
+      path: 'd/edhmipji89b0gb/welcome?orgId=1',
+      expiresInSeconds: 3600,
+    });
   });
 });
 

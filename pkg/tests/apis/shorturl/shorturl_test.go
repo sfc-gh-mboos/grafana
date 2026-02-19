@@ -468,6 +468,45 @@ func doUnifiedOnlyTests(t *testing.T, helper *apis.K8sTestHelper) {
 		err := client.Resource.Delete(context.Background(), uid, metav1.DeleteOptions{})
 		require.NoError(t, err)
 	})
+
+	t.Run("Expired short URL no longer redirects (unified only)", func(t *testing.T) {
+		client := helper.GetResourceClient(apis.ResourceClientArgs{
+			User: helper.Org1.None,
+			GVR:  gvr,
+		})
+
+		obj := apis.DoRequest[unstructured.Unstructured](helper, apis.RequestParams{
+			User:   client.Args.User,
+			Method: http.MethodPost,
+			Path:   "/apis/shorturl.grafana.app/v1beta1/namespaces/default/shorturls",
+			Body: []byte(`{
+				"metadata": {
+					"generateName": "redirect-expired-",
+					"annotations": {
+						"shorturl.grafana.app/ttlSeconds": "1"
+					}
+				},
+				"spec": { "path": "d/test/unified-expired-redirect" }
+			}`),
+		}, &unstructured.Unstructured{})
+		require.NotNil(t, obj.Result)
+
+		uid := obj.Result.GetName()
+		require.NotEmpty(t, uid)
+
+		time.Sleep(2 * time.Second)
+
+		redirectResponse := apis.DoRequest(helper, apis.RequestParams{
+			User:   client.Args.User,
+			Method: http.MethodGet,
+			Path:   "/goto/" + uid + "?orgId=default",
+		}, (*any)(nil))
+		assert.Equal(t, http.StatusPermanentRedirect, redirectResponse.Response.StatusCode)
+		assert.Equal(t, "http://localhost:3000/", redirectResponse.Response.Header.Get("Location"))
+
+		err := client.Resource.Delete(context.Background(), uid, metav1.DeleteOptions{})
+		require.NoError(t, err)
+	})
 }
 
 // Helper function to check if shortURL K8s APIs are available

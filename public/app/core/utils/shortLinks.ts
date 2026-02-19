@@ -17,6 +17,8 @@ import { notifyApp } from '../reducers/appNotification';
 
 import { copyStringToClipboard } from './explore';
 
+const SHORT_URL_TTL_SECONDS_ANNOTATION = 'shorturl.grafana.app/ttlSeconds';
+
 function buildHostUrl() {
   return `${window.location.protocol}//${window.location.host}${config.appSubUrl}`;
 }
@@ -33,25 +35,37 @@ function getRelativeURLPath(url: string) {
   return path.startsWith('/') ? path.substring(1, path.length) : path;
 }
 
-const createShortLinkLegacy = async (path: string): Promise<string> => {
-  const shortLink = await getBackendSrv().post(`/api/short-urls`, {
+const createShortLinkLegacy = async (path: string, expiresInSeconds?: number): Promise<string> => {
+  const payload: { path: string; expiresInSeconds?: number } = {
     path: getRelativeURLPath(path),
-  });
+  };
+  if (expiresInSeconds && expiresInSeconds > 0) {
+    payload.expiresInSeconds = expiresInSeconds;
+  }
+
+  const shortLink = await getBackendSrv().post(`/api/short-urls`, payload);
   return shortLink.url;
 };
 
 // Memoized API call, to not re-execute the same request multiple times
 // this function creates a shortURL using the legacy or the new k8s api depending on the feature toggle
-export const createShortLink = memoizeOne(async (path: string): Promise<string> => {
+export const createShortLink = memoizeOne(async (path: string, expiresInSeconds?: number): Promise<string> => {
   try {
     if (config.featureToggles.useKubernetesShortURLsAPI) {
+      const metadata: { annotations?: Record<string, string> } = {};
+      if (expiresInSeconds && expiresInSeconds > 0) {
+        metadata.annotations = {
+          [SHORT_URL_TTL_SECONDS_ANNOTATION]: String(expiresInSeconds),
+        };
+      }
+
       // Use RTK API - it handles caching/failures/retries automatically
       const result = await dispatch(
         shortURLAPIv1beta1.endpoints.createShortUrl.initiate({
           shortUrl: {
             apiVersion: 'shorturl.grafana.app/v1beta1',
             kind: 'ShortURL',
-            metadata: {},
+            metadata,
             spec: {
               path: getRelativeURLPath(path),
             },
@@ -70,7 +84,7 @@ export const createShortLink = memoizeOne(async (path: string): Promise<string> 
 
       throw new Error('Failed to create short URL');
     } else {
-      return await createShortLinkLegacy(path);
+      return await createShortLinkLegacy(path, expiresInSeconds);
     }
   } catch (err) {
     console.error('Error when creating shortened link: ', err);
@@ -85,19 +99,19 @@ export const createShortLink = memoizeOne(async (path: string): Promise<string> 
  * @param path - The long path to share.
  * @returns A ClipboardItem for the shortened link.
  */
-const createShortLinkClipboardItem = (path: string) => {
+const createShortLinkClipboardItem = (path: string, expiresInSeconds?: number) => {
   return new ClipboardItem({
-    'text/plain': createShortLink(path),
+    'text/plain': createShortLink(path, expiresInSeconds),
   });
 };
 
-export const createAndCopyShortLink = async (path: string) => {
+export const createAndCopyShortLink = async (path: string, expiresInSeconds?: number) => {
   try {
     if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
-      await navigator.clipboard.write([createShortLinkClipboardItem(path)]);
+      await navigator.clipboard.write([createShortLinkClipboardItem(path, expiresInSeconds)]);
       dispatch(notifyApp(createSuccessNotification('Shortened link copied to clipboard')));
     } else {
-      const shortLink = await createShortLink(path);
+      const shortLink = await createShortLink(path, expiresInSeconds);
       copyStringToClipboard(shortLink);
       dispatch(notifyApp(createSuccessNotification('Shortened link copied to clipboard')));
     }
@@ -114,7 +128,7 @@ export const createAndCopyShareDashboardLink = async (
 ) => {
   const shareUrl = createDashboardShareUrl(dashboard, opts, panel);
   if (opts.useShortUrl) {
-    return await createAndCopyShortLink(shareUrl);
+    return await createAndCopyShortLink(shareUrl, opts.shortLinkExpiresInSeconds);
   } else {
     copyStringToClipboard(shareUrl);
     dispatch(notifyApp(createSuccessNotification(t('link.share.copy-to-clipboard', 'Link copied to clipboard'))));
