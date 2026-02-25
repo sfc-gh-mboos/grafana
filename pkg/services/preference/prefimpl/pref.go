@@ -76,6 +76,10 @@ func (s *Service) GetWithDefaults(ctx context.Context, query *pref.GetPreference
 				res.JSONData.RegionalFormat = p.JSONData.RegionalFormat
 			}
 
+			if p.JSONData.CompactMode != nil {
+				res.JSONData.CompactMode = p.JSONData.CompactMode
+			}
+
 			if p.JSONData.QueryHistory.HomeTab != "" {
 				res.JSONData.QueryHistory.HomeTab = p.JSONData.QueryHistory.HomeTab
 			}
@@ -195,6 +199,13 @@ func (s *Service) Patch(ctx context.Context, cmd *pref.PatchPreferenceCommand) e
 		preference.JSONData.RegionalFormat = *cmd.RegionalFormat
 	}
 
+	if cmd.CompactMode != nil {
+		if preference.JSONData == nil {
+			preference.JSONData = &pref.PreferenceJSONData{}
+		}
+		preference.JSONData.CompactMode = cmd.CompactMode
+	}
+
 	if cmd.Navbar != nil && cmd.Navbar.BookmarkUrls != nil {
 		if preference.JSONData == nil {
 			preference.JSONData = &pref.PreferenceJSONData{}
@@ -261,9 +272,11 @@ func (s *Service) Delete(ctx context.Context, cmd *pref.DeleteCommand) error {
 }
 
 func preferenceData(cmd *pref.SavePreferenceCommand) (*pref.PreferenceJSONData, error) {
+	compactMode := cmd.CompactMode
 	jsonData := &pref.PreferenceJSONData{
 		Language:       cmd.Language,
 		RegionalFormat: cmd.RegionalFormat,
+		CompactMode:    &compactMode,
 	}
 	if cmd.Navbar != nil {
 		jsonData.Navbar = *cmd.Navbar

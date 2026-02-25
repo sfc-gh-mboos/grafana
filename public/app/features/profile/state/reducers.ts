@@ -13,6 +13,7 @@ export interface UserState {
   orgId: number;
   timeZone: TimeZone;
   weekStart: string;
+  compactMode: boolean;
   fiscalYearStartMonth: number;
   user: UserDTO | null;
   teams: Team[];
@@ -28,6 +29,7 @@ export const initialUserState: UserState = {
   orgId: contextSrv.user.orgId,
   timeZone: contextSrv.user.timezone,
   weekStart: contextSrv.user.weekStart,
+  compactMode: contextSrv.user.compactMode,
   fiscalYearStartMonth: 0,
   orgsAreLoading: false,
   sessionsAreLoading: false,
@@ -48,6 +50,9 @@ export const slice = createSlice({
     },
     updateWeekStart: (state, action: PayloadAction<{ weekStart: string }>) => {
       state.weekStart = action.payload.weekStart;
+    },
+    updateCompactMode: (state, action: PayloadAction<{ compactMode: boolean }>) => {
+      state.compactMode = action.payload.compactMode;
     },
     updateFiscalYearStartMonth: (state, action: PayloadAction<{ fiscalYearStartMonth: number }>) => {
       state.fiscalYearStartMonth = action.payload.fiscalYearStartMonth;
@@ -131,6 +136,14 @@ export const updateWeekStartForSession = (weekStart?: WeekStart): ThunkResult<vo
   };
 };
 
+export const updateCompactModeForSession = (compactMode: boolean): ThunkResult<void> => {
+  return async (dispatch) => {
+    set(contextSrv, 'user.compactMode', compactMode);
+    set(config, 'bootData.user.compactMode', compactMode);
+    dispatch(updateCompactMode({ compactMode }));
+  };
+};
+
 export const {
   setUpdating,
   initLoadOrgs,
@@ -143,6 +156,7 @@ export const {
   sessionsLoaded,
   updateTimeZone,
   updateWeekStart,
+  updateCompactMode,
   updateFiscalYearStartMonth,
 } = slice.actions;
 

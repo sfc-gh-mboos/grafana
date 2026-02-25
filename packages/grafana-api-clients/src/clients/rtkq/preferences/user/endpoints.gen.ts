@@ -42,6 +42,8 @@ export type PreferencesSpec = {
   queryHistory?: PreferencesQueryHistoryPreference;
   /** Selected locale (beta) */
   regionalFormat?: string;
+  /** Enable compact UI layout */
+  compactMode?: boolean;
   /** light, dark, empty is default */
   theme?: string;
   /** The timezone selection
@@ -77,6 +79,7 @@ export type PatchPrefsCmd = {
   navbar?: NavbarPreference;
   queryHistory?: QueryHistoryPreference;
   regionalFormat?: string;
+  compactMode?: boolean;
   theme?: 'light' | 'dark';
   /** Any IANA timezone string (e.g. America/New_York), 'utc', 'browser', or empty string */
   timezone?: string;
@@ -90,6 +93,7 @@ export type UpdatePrefsCmd = {
   navbar?: NavbarPreference;
   queryHistory?: QueryHistoryPreference;
   regionalFormat?: string;
+  compactMode?: boolean;
   theme?: 'light' | 'dark' | 'system';
   /** Any IANA timezone string (e.g. America/New_York), 'utc', 'browser', or empty string */
   timezone?: string;

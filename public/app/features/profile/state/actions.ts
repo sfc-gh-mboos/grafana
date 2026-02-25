@@ -13,6 +13,7 @@ import {
   sessionsLoaded,
   setUpdating,
   teamsLoaded,
+  updateCompactModeForSession,
   userLoaded,
   userSessionRevoked,
 } from './reducers';
@@ -85,6 +86,7 @@ export function updateUserProfile(payload: ProfileUpdateFields): ThunkResult<voi
   return async function (dispatch) {
     dispatch(setUpdating({ updating: true }));
     await api.updateUserProfile(payload);
+    await dispatch(updateCompactModeForSession(payload.compactMode));
     await dispatch(loadUser());
     dispatch(setUpdating({ updating: false }));
   };

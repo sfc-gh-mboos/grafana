@@ -49,6 +49,10 @@ export interface Preferences {
    */
   regionalFormat?: string;
   /**
+   * Enable compact UI layout
+   */
+  compactMode?: boolean;
+  /**
    * light, dark, empty is default
    */
   theme?: string;

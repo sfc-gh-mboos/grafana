@@ -38,6 +38,7 @@ export class User implements Omit<CurrentUserInternal, 'lightTheme'> {
   gravatarUrl: string;
   timezone: string;
   weekStart: string;
+  compactMode: boolean;
   regionalFormat: string;
   language: string;
   helpFlags1: number;
@@ -68,6 +69,7 @@ export class User implements Omit<CurrentUserInternal, 'lightTheme'> {
     this.regionalFormat = '';
     this.language = '';
     this.weekStart = '';
+    this.compactMode = false;
     this.gravatarUrl = '';
     this.analytics = {
       identifier: '',

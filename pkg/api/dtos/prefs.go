@@ -19,6 +19,7 @@ type UpdatePrefsCmd struct {
 	QueryHistory   *pref.QueryHistoryPreference `json:"queryHistory,omitempty"`
 	Language       string                       `json:"language"`
 	RegionalFormat string                       `json:"regionalFormat"`
+	CompactMode    bool                         `json:"compactMode"`
 	Navbar         *pref.NavbarPreference       `json:"navbar,omitempty"`
 }
 
@@ -35,6 +36,7 @@ type PatchPrefsCmd struct {
 	WeekStart        *string                      `json:"weekStart,omitempty"`
 	Language         *string                      `json:"language,omitempty"`
 	RegionalFormat   *string                      `json:"regionalFormat,omitempty"`
+	CompactMode      *bool                        `json:"compactMode,omitempty"`
 	QueryHistory     *pref.QueryHistoryPreference `json:"queryHistory,omitempty"`
 	HomeDashboardUID *string                      `json:"homeDashboardUID,omitempty"`
 	Navbar           *pref.NavbarPreference       `json:"navbar,omitempty"`

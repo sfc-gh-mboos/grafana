@@ -4,6 +4,7 @@ import { config, useScopes } from '@grafana/runtime';
 import { useGrafana } from 'app/core/context/GrafanaContext';
 import { useMediaQueryMinWidth } from 'app/core/hooks/useMediaQueryMinWidth';
 import { isDashboardSceneEnabled } from 'app/features/dashboard-scene/utils/utils';
+import { useSelector } from 'app/types/store';
 
 import { AppChromeState } from '../AppChromeService';
 import { useExtensionSidebarContext } from '../ExtensionSidebar/ExtensionSidebarProvider';
@@ -79,6 +80,7 @@ function getHeaderLevelsGivenState(
  */
 export function useChromeHeaderHeight() {
   const levels = useChromeHeaderLevels();
+  const compactMode = useSelector((state) => state.user?.compactMode ?? false);
 
   // if the extension sidebar is open, the inner pane will be scrollable, thus we need to set the header height to 0
   const { isOpen: isExtensionSidebarOpen } = useExtensionSidebarContext();
@@ -87,13 +89,17 @@ export function useChromeHeaderHeight() {
     return 0;
   }
 
-  return levels * getChromeHeaderLevelHeight();
+  return levels * getChromeHeaderLevelHeight(compactMode);
 }
 
 /**
  * Can replace with constant once unifiedNavbars feature toggle is removed
  **/
-export function getChromeHeaderLevelHeight() {
+export function getChromeHeaderLevelHeight(compactMode = false) {
   // Waiting with switch to 48 until we have a story for scopes
-  return config.featureToggles.unifiedNavbars || config.featureToggles.dashboardNewLayouts ? 48 : 40;
+  const defaultHeight = config.featureToggles.unifiedNavbars || config.featureToggles.dashboardNewLayouts ? 48 : 40;
+  if (compactMode && defaultHeight > 40) {
+    return 40;
+  }
+  return defaultHeight;
 }

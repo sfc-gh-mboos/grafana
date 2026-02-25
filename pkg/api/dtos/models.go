@@ -44,6 +44,7 @@ type CurrentUser struct {
 	GravatarUrl                string             `json:"gravatarUrl"`
 	Timezone                   string             `json:"timezone"`
 	WeekStart                  string             `json:"weekStart"`
+	CompactMode                bool               `json:"compactMode"`
 	Locale                     string             `json:"locale"`
 	RegionalFormat             string             `json:"regionalFormat"`
 	Language                   string             `json:"language"`

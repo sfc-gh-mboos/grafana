@@ -206,6 +206,13 @@ func schema_pkg_apis_preferences_v1alpha1_PreferencesSpec(ref common.ReferenceCa
 							Format:      "",
 						},
 					},
+					"compactMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enable compact UI layout",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"queryHistory": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Explore query history preferences",

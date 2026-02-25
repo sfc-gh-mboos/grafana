@@ -1,8 +1,9 @@
 import { selectors } from '@grafana/e2e-selectors';
 import { Trans, t } from '@grafana/i18n';
-import { Button, Field, FieldSet, Icon, Input, Tooltip } from '@grafana/ui';
+import { Button, Field, FieldSet, Icon, Input, Switch, Tooltip } from '@grafana/ui';
 import { Form } from 'app/core/components/Form/Form';
 import config from 'app/core/config';
+import { contextSrv } from 'app/core/services/context_srv';
 import { UserDTO } from 'app/types/user';
 
 import { ProfileUpdateFields } from './types';
@@ -72,6 +73,17 @@ export const UserProfileEditForm = ({ user, isSavingUser, updateProfile }: Props
                   defaultValue={user?.login ?? ''}
                   placeholder={t('user-profile.fields.username-label', 'Username') + lockMessage}
                   suffix={<InputSuffix />}
+                />
+              </Field>
+
+              <Field
+                label={t('user-profile.fields.compact-mode-label', 'Compact mode')}
+                description={t('user-profile.fields.compact-mode-description', 'Use a denser app layout')}
+              >
+                <Switch
+                  {...register('compactMode')}
+                  id="edit-user-profile-compact-mode"
+                  defaultChecked={contextSrv.user.compactMode}
                 />
               </Field>
             </FieldSet>

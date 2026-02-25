@@ -84,6 +84,7 @@ function getSelectors() {
     name: () => screen.getByRole('textbox', { name: /^name$/i }),
     email: () => screen.getByRole('textbox', { name: /email/i }),
     username: () => screen.getByRole('textbox', { name: /username/i }),
+    compactMode: () => screen.getByRole('checkbox', { name: /compact mode/i }),
     saveProfile: () => screen.getByTestId(selectors.components.UserProfile.profileSaveButton),
     savePreferences: () => screen.getByTestId(selectors.components.UserProfile.preferencesSaveButton),
     teamsTable,
@@ -285,6 +286,23 @@ describe('UserProfileEditPage', () => {
           email: 'test@test.se',
           login: 'test',
           name: 'Test User',
+          compactMode: false,
+        });
+      });
+
+      it('should submit compact mode preference', async () => {
+        const { props } = await getTestContext();
+
+        const { compactMode, saveProfile } = getSelectors();
+        await userEvent.click(compactMode());
+        await userEvent.click(saveProfile(), { pointerEventsCheck: PointerEventsCheckLevel.Never });
+
+        await waitFor(() => expect(props.updateUserProfile).toHaveBeenCalledTimes(1));
+        expect(props.updateUserProfile).toHaveBeenCalledWith({
+          email: 'test@test.com',
+          login: 'test',
+          name: 'Test User',
+          compactMode: true,
         });
       });
     });

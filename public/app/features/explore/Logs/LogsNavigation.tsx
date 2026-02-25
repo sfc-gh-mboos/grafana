@@ -6,6 +6,7 @@ import { t } from '@grafana/i18n';
 import { config, reportInteraction } from '@grafana/runtime';
 import { Button, Icon, useTheme2 } from '@grafana/ui';
 import { getChromeHeaderLevelHeight } from 'app/core/components/AppChrome/TopBar/useChromeHeaderHeight';
+import { useSelector } from 'app/types/store';
 
 type Props = {
   logsSortOrder?: LogsSortOrder | null;
@@ -16,7 +17,8 @@ type Props = {
 function LogsNavigation({ logsSortOrder, scrollToTopLogs }: Props) {
   const oldestLogsFirst = logsSortOrder === LogsSortOrder.Ascending;
   const theme = useTheme2();
-  const styles = getStyles(theme, oldestLogsFirst);
+  const compactMode = useSelector((state) => state.user?.compactMode ?? false);
+  const styles = getStyles(theme, oldestLogsFirst, compactMode);
 
   const onScrollToTopClick = useCallback(() => {
     reportInteraction('grafana_explore_logs_scroll_top_clicked');
@@ -40,8 +42,8 @@ function LogsNavigation({ logsSortOrder, scrollToTopLogs }: Props) {
 
 export default memo(LogsNavigation);
 
-const getStyles = (theme: GrafanaTheme2, oldestLogsFirst: boolean) => {
-  const navContainerHeight = `calc(100vh - 2*${theme.spacing(2)} - 2*${getChromeHeaderLevelHeight()}px)`;
+const getStyles = (theme: GrafanaTheme2, oldestLogsFirst: boolean, compactMode: boolean) => {
+  const navContainerHeight = `calc(100vh - 2*${theme.spacing(2)} - 2*${getChromeHeaderLevelHeight(compactMode)}px)`;
 
   return {
     navContainer: css({

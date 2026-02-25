@@ -180,6 +180,7 @@ export interface CurrentUserDTO {
   gravatarUrl: string;
   timezone: string;
   weekStart: string;
+  compactMode?: boolean;
   regionalFormat: string;
   language: string;
   permissions?: Record<string, boolean>;

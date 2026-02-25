@@ -177,6 +177,7 @@ func (hs *HTTPServer) patchPreferencesFor(ctx context.Context, orgID, userID, te
 		HomeDashboardUID: dtoCmd.HomeDashboardUID,
 		Language:         dtoCmd.Language,
 		RegionalFormat:   dtoCmd.RegionalFormat,
+		CompactMode:      dtoCmd.CompactMode,
 		QueryHistory:     dtoCmd.QueryHistory,
 		Navbar:           dtoCmd.Navbar,
 	}

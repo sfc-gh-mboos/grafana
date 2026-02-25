@@ -32,6 +32,9 @@ preferencesV1alpha1: {
 			// Selected locale (beta)
 			regionalFormat?: string
 
+			// Enable compact UI layout
+			compactMode?: bool
+
 			// Explore query history preferences
 			queryHistory?: #QueryHistoryPreference
 

@@ -40,6 +40,8 @@ type PreferencesSpec struct {
 	Language *string `json:"language,omitempty"`
 	// Selected locale (beta)
 	RegionalFormat *string `json:"regionalFormat,omitempty"`
+	// Enable compact UI layout
+	CompactMode *bool `json:"compactMode,omitempty"`
 	// Explore query history preferences
 	QueryHistory *PreferencesQueryHistoryPreference `json:"queryHistory,omitempty"`
 	// Navigation preferences

@@ -9,6 +9,7 @@ import {
   sessionsLoaded,
   setUpdating,
   teamsLoaded,
+  updateCompactMode,
   updateTimeZone,
   updateWeekStart,
   userLoaded,
@@ -43,6 +44,15 @@ describe('userReducer', () => {
         .givenReducer(userReducer, { ...initialUserState })
         .whenActionIsDispatched(updateWeekStart({ weekStart: 'xyz' }))
         .thenStateShouldEqual({ ...initialUserState, weekStart: 'xyz' });
+    });
+  });
+
+  describe('when updateCompactMode is dispatched', () => {
+    it('then state should be correct', () => {
+      reducerTester<UserState>()
+        .givenReducer(userReducer, { ...initialUserState, compactMode: false })
+        .whenActionIsDispatched(updateCompactMode({ compactMode: true }))
+        .thenStateShouldEqual({ ...initialUserState, compactMode: true });
     });
   });
 

@@ -5,6 +5,7 @@ import { Components } from '@grafana/e2e-selectors';
 import { ScopesContextValue } from '@grafana/runtime';
 import { Stack, useStyles2 } from '@grafana/ui';
 import { ScopesSelector } from 'app/features/scopes/selector/ScopesSelector';
+import { useSelector } from 'app/types/store';
 
 import { useExtensionSidebarContext } from '../ExtensionSidebar/ExtensionSidebarProvider';
 import { NavToolbarSeparator } from '../NavToolbar/NavToolbarSeparator';
@@ -19,7 +20,8 @@ export interface Props {
 
 export function SingleTopBarActions({ actions, breadcrumbActions, scopes }: Props) {
   const { isOpen: isExtensionSidebarOpen, extensionSidebarWidth } = useExtensionSidebarContext();
-  const styles = useStyles2(getStyles, extensionSidebarWidth);
+  const compactMode = useSelector((state) => state.user?.compactMode ?? false);
+  const styles = useStyles2(getStyles, extensionSidebarWidth, compactMode);
 
   return (
     <div
@@ -38,15 +40,15 @@ export function SingleTopBarActions({ actions, breadcrumbActions, scopes }: Prop
   );
 }
 
-const getStyles = (theme: GrafanaTheme2, extensionSidebarWidth = 0) => {
+const getStyles = (theme: GrafanaTheme2, extensionSidebarWidth = 0, compactMode = false) => {
   return {
     actionsBar: css({
       alignItems: 'center',
       backgroundColor: theme.colors.background.primary,
       borderBottom: `1px solid ${theme.colors.border.weak}`,
       display: 'flex',
-      height: getChromeHeaderLevelHeight(),
-      padding: theme.spacing(0, 1, 0, 2),
+      height: getChromeHeaderLevelHeight(compactMode),
+      padding: theme.spacing(0, compactMode ? 0.5 : 1, 0, compactMode ? 1 : 2),
     }),
     constrained: css({
       maxWidth: `calc(100% - ${extensionSidebarWidth}px)`,

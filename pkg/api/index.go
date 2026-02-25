@@ -131,6 +131,10 @@ func (hs *HTTPServer) setIndexViewData(c *contextmodel.ReqContext) (*dtos.IndexV
 	if prefs.WeekStart != nil {
 		weekStart = *prefs.WeekStart
 	}
+	compactMode := false
+	if prefs.JSONData != nil && prefs.JSONData.CompactMode != nil {
+		compactMode = *prefs.JSONData.CompactMode
+	}
 
 	theme := hs.getThemeForIndexData(prefs.Theme, urlPrefs.Theme)
 	assets, err := webassets.GetWebAssets(c.Req.Context(), hs.Cfg, hs.License)
@@ -159,6 +163,7 @@ func (hs *HTTPServer) setIndexViewData(c *contextmodel.ReqContext) (*dtos.IndexV
 			LightTheme:                 theme.Type == "light",
 			Timezone:                   prefs.Timezone,
 			WeekStart:                  weekStart,
+			CompactMode:                compactMode,
 			Locale:                     locale, // << will be removed in favor of RegionalFormat
 			RegionalFormat:             regionalFormat,
 			Language:                   language,

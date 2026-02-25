@@ -54,6 +54,7 @@ type SavePreferenceCommand struct {
 	Theme            string                  `json:"theme,omitempty"`
 	Language         string                  `json:"language,omitempty"`
 	RegionalFormat   string                  `json:"regionalFormat,omitempty"`
+	CompactMode      bool                    `json:"compactMode,omitempty"`
 	QueryHistory     *QueryHistoryPreference `json:"queryHistory,omitempty"`
 	Navbar           *NavbarPreference       `json:"navbar,omitempty"`
 }
@@ -77,6 +78,7 @@ type PatchPreferenceCommand struct {
 	Theme            *string                 `json:"theme,omitempty"`
 	Language         *string                 `json:"language,omitempty"`
 	RegionalFormat   *string                 `json:"regionalFormat,omitempty"`
+	CompactMode      *bool                   `json:"compactMode,omitempty"`
 	QueryHistory     *QueryHistoryPreference `json:"queryHistory,omitempty"`
 	Navbar           *NavbarPreference       `json:"navbar,omitempty"`
 }
@@ -84,6 +86,7 @@ type PatchPreferenceCommand struct {
 type PreferenceJSONData struct {
 	Language       string                 `json:"language"`
 	RegionalFormat string                 `json:"regionalFormat"`
+	CompactMode    *bool                  `json:"compactMode,omitempty"`
 	QueryHistory   QueryHistoryPreference `json:"queryHistory"`
 	Navbar         NavbarPreference       `json:"navbar"`
 }

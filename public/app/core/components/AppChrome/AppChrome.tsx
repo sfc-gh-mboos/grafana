@@ -11,6 +11,7 @@ import { useGrafana } from 'app/core/context/GrafanaContext';
 import { useMediaQueryMinWidth } from 'app/core/hooks/useMediaQueryMinWidth';
 import { CommandPalette } from 'app/features/commandPalette/CommandPalette';
 import { ScopesDashboards } from 'app/features/scopes/dashboards/ScopesDashboards';
+import { useSelector } from 'app/types/store';
 
 import { AppChromeMenu } from './AppChromeMenu';
 import { AppChromeService, DOCKED_LOCAL_STORAGE_KEY } from './AppChromeService';
@@ -35,6 +36,7 @@ export function AppChrome({ children }: Props) {
     extensionSidebarWidth,
     setExtensionSidebarWidth,
   } = useExtensionSidebarContext();
+  const compactMode = useSelector((state) => state.user?.compactMode ?? false);
   const state = chrome.useState();
   const scopes = useScopes();
 
@@ -44,7 +46,7 @@ export function AppChrome({ children }: Props) {
   );
 
   const headerLevels = useChromeHeaderLevels();
-  const styles = useStyles2(getStyles, headerLevels, getChromeHeaderLevelHeight());
+  const styles = useStyles2(getStyles, headerLevels, getChromeHeaderLevelHeight(compactMode));
   const contentSizeStyles = useStyles2(getContentSizeStyles, extensionSidebarWidth);
   const dragStyles = useStyles2(getDragStyles);
 
@@ -88,6 +90,7 @@ export function AppChrome({ children }: Props) {
       id={floatingUtils.BOUNDARY_ELEMENT_ID}
       className={classNames('main-view', {
         'main-view--chrome-hidden': state.chromeless,
+        'main-view--compact': compactMode,
       })}
     >
       {!state.chromeless && (

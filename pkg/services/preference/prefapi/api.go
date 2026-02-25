@@ -60,6 +60,7 @@ func UpdatePreferencesFor(ctx context.Context,
 		WeekStart:        dtoCmd.WeekStart,
 		HomeDashboardID:  dtoCmd.HomeDashboardID,
 		HomeDashboardUID: dtoCmd.HomeDashboardUID,
+		CompactMode:      dtoCmd.CompactMode,
 		QueryHistory:     dtoCmd.QueryHistory,
 		Navbar:           dtoCmd.Navbar,
 	}
@@ -110,6 +111,10 @@ func GetPreferencesFor(ctx context.Context,
 			if preference.JSONData.RegionalFormat != "" {
 				dto.RegionalFormat = &preference.JSONData.RegionalFormat
 			}
+		}
+
+		if preference.JSONData.CompactMode != nil {
+			dto.CompactMode = preference.JSONData.CompactMode
 		}
 
 		if preference.JSONData.Navbar.BookmarkUrls != nil {

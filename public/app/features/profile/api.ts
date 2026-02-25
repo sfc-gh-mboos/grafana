@@ -39,8 +39,11 @@ async function setUserOrg(org: UserOrg): Promise<void> {
 }
 
 async function updateUserProfile(payload: ProfileUpdateFields): Promise<void> {
+  const { compactMode, ...userPayload } = payload;
+
   try {
-    await getBackendSrv().put('/api/user', payload);
+    await getBackendSrv().put('/api/user', userPayload);
+    await getBackendSrv().patch('/api/user/preferences', { compactMode });
   } catch (err) {
     console.error(err);
   }

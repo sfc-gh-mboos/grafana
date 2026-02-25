@@ -354,6 +354,8 @@ export type PreferencesSpec = {
   queryHistory?: PreferencesQueryHistoryPreference;
   /** Selected locale (beta) */
   regionalFormat?: string;
+  /** Enable compact UI layout */
+  compactMode?: boolean;
   /** light, dark, empty is default */
   theme?: string;
   /** The timezone selection */

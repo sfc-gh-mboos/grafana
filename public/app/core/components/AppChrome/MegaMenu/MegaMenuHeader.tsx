@@ -23,8 +23,9 @@ export function MegaMenuHeader({ handleDockedMenu, onClose }: Props) {
   const theme = useTheme2();
   const { chrome } = useGrafana();
   const state = chrome.useState();
+  const compactMode = useSelector((state) => state.user?.compactMode ?? false);
   const homeNav = useSelector((state) => state.navIndex)[HOME_NAV_ID];
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, compactMode);
 
   return (
     <div className={styles.header}>
@@ -58,7 +59,7 @@ export function MegaMenuHeader({ handleDockedMenu, onClose }: Props) {
 
 MegaMenuHeader.displayName = 'MegaMenuHeader';
 
-const getStyles = (theme: GrafanaTheme2) => ({
+const getStyles = (theme: GrafanaTheme2, compactMode: boolean) => ({
   dockMenuButton: css({
     display: 'none',
 
@@ -70,10 +71,10 @@ const getStyles = (theme: GrafanaTheme2) => ({
     alignItems: 'center',
     borderBottom: `1px solid ${theme.colors.border.weak}`,
     display: 'flex',
-    gap: theme.spacing(1),
+    gap: theme.spacing(compactMode ? 0.5 : 1),
     justifyContent: 'space-between',
-    padding: theme.spacing(0, 1, 0, 1),
-    height: getChromeHeaderLevelHeight(),
+    padding: theme.spacing(0, compactMode ? 0.5 : 1, 0, compactMode ? 0.5 : 1),
+    height: getChromeHeaderLevelHeight(compactMode),
     flexShrink: 0,
   }),
   flexGrow: css({ flexGrow: 1 }),
