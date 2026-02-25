@@ -295,3 +295,38 @@ Use admonitions sparingly.
 Only include exceptional information in admonitions.
 
 <!-- docs-ai-end -->
+
+## Cursor Cloud specific instructions
+
+### Overview
+
+Grafana is a Go backend + React/TypeScript frontend monorepo. The backend serves the API and proxies the frontend assets. The frontend is built with Webpack. SQLite is the default embedded database — no external services are required for basic development.
+
+### Running services
+
+- **Backend:** `./bin/linux-amd64/grafana server --homepath /workspace` (build first with `go run build.go build`). Alternatively, `make run` uses `air` for hot-reload. Serves on port `3000`.
+- **Frontend:** `yarn start` compiles and watches frontend assets (plugins + main app). Set `NODE_OPTIONS="--max-old-space-size=8192"` and `ulimit -S -n 8192` before running.
+- **Default credentials:** `admin` / `admin`.
+
+### Key commands
+
+Refer to `contribute/developer-guide.md` for full details. Summary:
+
+| Task | Command |
+|---|---|
+| Install frontend deps | `yarn install --immutable` |
+| Build backend | `go run build.go build` |
+| Start backend (hot-reload) | `make run` |
+| Start frontend (watch) | `yarn start` |
+| Frontend lint | `yarn run lint:ts` |
+| Backend lint | `go vet ./pkg/...` |
+| Frontend tests | `yarn jest <path>` |
+| Backend tests | `go test ./pkg/...` |
+
+### Gotchas
+
+- **Node.js version:** Must be v24.x (per `.nvmrc`). Use `nvm use 24.11.0` to activate.
+- **Corepack:** Must be enabled (`corepack enable`) before running `yarn`. Yarn 4.11.0 is pinned in `.yarnrc.yml`.
+- **Build scripts disabled:** `.yarnrc.yml` sets `enableScripts: false`. Only `cypress` and `msw` are opted in via `dependenciesMeta`. Native packages (`@swc/core`, `esbuild`) use prebuilt platform binaries.
+- **inotify watchers:** Increase to 524288 (`echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p`) to avoid `ENOSPC` errors with `yarn start`.
+- **Pre-commit hooks** are opt-in via `make lefthook-install`. Not required for cloud agent operation.
