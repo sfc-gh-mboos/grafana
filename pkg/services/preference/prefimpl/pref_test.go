@@ -85,6 +85,8 @@ func TestGetWithDefaults_withUserAndOrgPrefs(t *testing.T) {
 
 	weekStartOne := "1"
 	weekStartTwo := "2"
+	compactModeTrue := true
+	compactModeFalse := false
 	insertPrefs(t, prefService.store,
 		pref.Preference{
 			OrgID:            1,
@@ -96,6 +98,7 @@ func TestGetWithDefaults_withUserAndOrgPrefs(t *testing.T) {
 			JSONData: &pref.PreferenceJSONData{
 				Language:       "en-GB",
 				RegionalFormat: "en",
+				CompactMode:    &compactModeTrue,
 			},
 		},
 		pref.Preference{
@@ -109,6 +112,7 @@ func TestGetWithDefaults_withUserAndOrgPrefs(t *testing.T) {
 			JSONData: &pref.PreferenceJSONData{
 				Language:       "en-AU",
 				RegionalFormat: "es",
+				CompactMode:    &compactModeFalse,
 			},
 		},
 	)
@@ -126,6 +130,7 @@ func TestGetWithDefaults_withUserAndOrgPrefs(t *testing.T) {
 			JSONData: &pref.PreferenceJSONData{
 				Language:       "en-AU",
 				RegionalFormat: "es",
+				CompactMode:    &compactModeFalse,
 			},
 		}
 		if diff := cmp.Diff(expected, preference); diff != "" {
@@ -147,6 +152,7 @@ func TestGetWithDefaults_withUserAndOrgPrefs(t *testing.T) {
 			JSONData: &pref.PreferenceJSONData{
 				Language:       "en-GB",
 				RegionalFormat: "en",
+				CompactMode:    &compactModeTrue,
 			},
 		}
 		if diff := cmp.Diff(expected, preference); diff != "" {
