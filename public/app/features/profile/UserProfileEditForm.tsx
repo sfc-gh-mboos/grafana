@@ -83,6 +83,7 @@ export const UserProfileEditForm = ({ user, isSavingUser, updateProfile }: Props
                 <Switch
                   {...register('compactMode')}
                   id="edit-user-profile-compact-mode"
+                  data-testid="edit-user-profile-compact-mode"
                   defaultChecked={contextSrv.user.compactMode}
                 />
               </Field>

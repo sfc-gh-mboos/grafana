@@ -84,7 +84,7 @@ function getSelectors() {
     name: () => screen.getByRole('textbox', { name: /^name$/i }),
     email: () => screen.getByRole('textbox', { name: /email/i }),
     username: () => screen.getByRole('textbox', { name: /username/i }),
-    compactMode: () => screen.getByRole('checkbox', { name: /compact mode/i }),
+    compactMode: () => screen.getByTestId('edit-user-profile-compact-mode'),
     saveProfile: () => screen.getByTestId(selectors.components.UserProfile.profileSaveButton),
     savePreferences: () => screen.getByTestId(selectors.components.UserProfile.preferencesSaveButton),
     teamsTable,
