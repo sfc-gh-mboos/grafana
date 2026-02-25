@@ -295,3 +295,37 @@ Use admonitions sparingly.
 Only include exceptional information in admonitions.
 
 <!-- docs-ai-end -->
+
+## Cursor Cloud specific instructions
+
+This is the Grafana open-source repository — a Go backend + React/TypeScript frontend monolith.
+
+### Key versions
+
+- **Go**: 1.25.6 (check `go.mod` for current)
+- **Node.js**: v24.11.0 (check `.nvmrc`); use nvm to switch
+- **Yarn**: 4.11.0 (Berry, via corepack)
+
+### Running services
+
+Refer to `contribute/developer-guide.md` for full setup instructions. In short:
+
+- **Backend**: `make run` — builds and starts `grafana-server` on port 3000 with Air live-reload. First build downloads Go dependencies and takes a few minutes.
+- **Frontend**: `yarn start` — webpack dev watch mode; assets are served by the backend.
+- **Default login**: `admin` / `admin` (prompts for password change on first login).
+- **Database**: SQLite by default (embedded, no external DB needed).
+
+### Lint and test commands
+
+- **Frontend lint**: `yarn lint:ts` (ESLint), `yarn lint:sass` (Stylelint), or `yarn lint` (both)
+- **Frontend tests**: `yarn jest --ci` (full suite) or `yarn jest --ci --testPathPattern='<path>'` (subset)
+- **Backend lint**: `go vet ./pkg/...` — first run is slow due to dependency compilation
+- **Backend tests**: `go test -v ./pkg/...` — first run compiles all dependencies (~3 min)
+- **Typecheck**: `yarn typecheck`
+
+### Non-obvious caveats
+
+- Increase inotify watchers before running `yarn start`: `echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p`
+- First `go test` or `go vet` run compiles the entire dependency tree (can take 3+ minutes); subsequent runs use the build cache.
+- `yarn install --immutable` doesn't run postinstall scripts for some native packages (e.g. `@swc/core`, `esbuild`). This is expected via `pnpm.onlyBuiltDependencies` config and doesn't affect dev workflow.
+- Docker is not needed for core development; it's only required for `make devenv sources=...` to spin up optional data source containers.
