@@ -13,10 +13,10 @@ import { useGrafana } from 'app/core/context/GrafanaContext';
 import { setBookmark } from 'app/core/reducers/navBarTree';
 import { useDispatch, useSelector } from 'app/types/store';
 
-import { createBookmarkPreferenceItem, withDerivedBookmarkMetadata } from './bookmarks';
 import { MegaMenuExtensionPoint } from './MegaMenuExtensionPoint';
 import { MegaMenuHeader } from './MegaMenuHeader';
 import { MegaMenuItem } from './MegaMenuItem';
+import { createBookmarkPreferenceItem, withDerivedBookmarkMetadata } from './bookmarks';
 import { usePinnedItems } from './hooks';
 import { enrichWithInteractionTracking, findByUrl, getActiveItem } from './utils';
 

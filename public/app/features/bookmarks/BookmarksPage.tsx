@@ -29,6 +29,7 @@ export function BookmarksPage() {
   const [searchValue, setSearchValue] = useState('');
   const [categoryFilters, setCategoryFilters] = useState<Array<SelectableValue<string>>>([]);
   const [tagFilters, setTagFilters] = useState<Array<SelectableValue<string>>>([]);
+  const collator = useMemo(() => new Intl.Collator(undefined, { sensitivity: 'base' }), []);
 
   const validItems = useMemo(() => {
     return pinnedItems.reduce((acc: BookmarkedNavItem[], bookmark) => {
@@ -50,8 +51,8 @@ export function BookmarksPage() {
 
   const categoryOptions = useMemo<Array<SelectableValue<string>>>(() => {
     const categoryNames = Array.from(new Set(validItems.map((bookmark) => bookmark.category)));
-    return categoryNames.sort((a, b) => a.localeCompare(b)).map((category) => ({ label: category, value: category }));
-  }, [validItems]);
+    return categoryNames.sort((a, b) => collator.compare(a, b)).map((category) => ({ label: category, value: category }));
+  }, [collator, validItems]);
 
   const tagOptions = useMemo<Array<SelectableValue<string>>>(() => {
     const tags = new Set<string>();
@@ -61,9 +62,9 @@ export function BookmarksPage() {
       }
     }
     return Array.from(tags)
-      .sort((a, b) => a.localeCompare(b))
+      .sort((a, b) => collator.compare(a, b))
       .map((tag) => ({ label: tag, value: tag }));
-  }, [validItems]);
+  }, [collator, validItems]);
 
   const activeCategories = categoryFilters.map((option) => option.value).filter((value): value is string => Boolean(value));
   const activeTags = tagFilters.map((option) => option.value).filter((value): value is string => Boolean(value));
@@ -104,9 +105,17 @@ export function BookmarksPage() {
     }
 
     return Array.from(grouped.entries()).sort(([leftCategory], [rightCategory]) =>
-      leftCategory.localeCompare(rightCategory)
+      collator.compare(leftCategory, rightCategory)
     );
-  }, [filteredItems]);
+  }, [collator, filteredItems]);
+
+  const onCategoryFiltersChange = (options: Array<SelectableValue<string>>) => {
+    setCategoryFilters(options);
+  };
+
+  const onTagFiltersChange = (options: Array<SelectableValue<string>>) => {
+    setTagFilters(options);
+  };
 
   return (
     <Page navId="bookmarks">
@@ -134,7 +143,7 @@ export function BookmarksPage() {
                 value={categoryFilters}
                 placeholder={t('bookmarks-page.filters.category.placeholder', 'Filter by category')}
                 aria-label={t('bookmarks-page.filters.category.aria-label', 'Filter bookmarks by category')}
-                onChange={(options) => setCategoryFilters(options as Array<SelectableValue<string>>)}
+                onChange={onCategoryFiltersChange}
               />
               <MultiSelect
                 className={styles.filterSelect}
@@ -142,7 +151,7 @@ export function BookmarksPage() {
                 value={tagFilters}
                 placeholder={t('bookmarks-page.filters.tags.placeholder', 'Filter by tags')}
                 aria-label={t('bookmarks-page.filters.tags.aria-label', 'Filter bookmarks by tags')}
-                onChange={(options) => setTagFilters(options as Array<SelectableValue<string>>)}
+                onChange={onTagFiltersChange}
               />
             </section>
 
