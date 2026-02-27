@@ -54,7 +54,7 @@ type SavePreferenceCommand struct {
 	Theme            string                  `json:"theme,omitempty"`
 	Language         string                  `json:"language,omitempty"`
 	RegionalFormat   string                  `json:"regionalFormat,omitempty"`
-	CompactMode      bool                    `json:"compactMode,omitempty"`
+	CompactMode      *bool                   `json:"compactMode,omitempty"`
 	QueryHistory     *QueryHistoryPreference `json:"queryHistory,omitempty"`
 	Navbar           *NavbarPreference       `json:"navbar,omitempty"`
 }

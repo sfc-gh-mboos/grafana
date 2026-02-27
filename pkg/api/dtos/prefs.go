@@ -19,7 +19,7 @@ type UpdatePrefsCmd struct {
 	QueryHistory   *pref.QueryHistoryPreference `json:"queryHistory,omitempty"`
 	Language       string                       `json:"language"`
 	RegionalFormat string                       `json:"regionalFormat"`
-	CompactMode    bool                         `json:"compactMode"`
+	CompactMode    *bool                        `json:"compactMode,omitempty"`
 	Navbar         *pref.NavbarPreference       `json:"navbar,omitempty"`
 }
 

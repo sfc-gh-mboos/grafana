@@ -451,6 +451,68 @@ func TestSave(t *testing.T) {
 	})
 }
 
+func TestSave_compactModeInheritance(t *testing.T) {
+	prefService := &Service{
+		store:    newFake(),
+		defaults: prefsFromConfig(setting.NewCfg()),
+	}
+
+	compactModeTrue := true
+
+	t.Run("org sets compact mode, user saves without compact mode, inherits org setting", func(t *testing.T) {
+		insertPrefs(t, prefService.store,
+			pref.Preference{
+				OrgID: 1,
+				JSONData: &pref.PreferenceJSONData{
+					CompactMode: &compactModeTrue,
+				},
+			},
+		)
+
+		err := prefService.Save(context.Background(),
+			&pref.SavePreferenceCommand{
+				OrgID:  1,
+				UserID: 1,
+				Theme:  "dark",
+			},
+		)
+		require.NoError(t, err)
+
+		preference, err := prefService.GetWithDefaults(context.Background(), &pref.GetPreferenceWithDefaultsQuery{
+			OrgID:  1,
+			UserID: 1,
+		})
+		require.NoError(t, err)
+
+		require.NotNil(t, preference.JSONData)
+		require.NotNil(t, preference.JSONData.CompactMode)
+		assert.True(t, *preference.JSONData.CompactMode, "User should inherit org's compact mode setting")
+	})
+
+	t.Run("user explicitly sets compact mode to false, overrides org setting", func(t *testing.T) {
+		compactModeFalse := false
+		err := prefService.Save(context.Background(),
+			&pref.SavePreferenceCommand{
+				OrgID:       1,
+				UserID:      2,
+				Theme:       "light",
+				CompactMode: &compactModeFalse,
+			},
+		)
+		require.NoError(t, err)
+
+		preference, err := prefService.GetWithDefaults(context.Background(), &pref.GetPreferenceWithDefaultsQuery{
+			OrgID:  1,
+			UserID: 2,
+		})
+		require.NoError(t, err)
+
+		require.NotNil(t, preference.JSONData)
+		require.NotNil(t, preference.JSONData.CompactMode)
+		assert.False(t, *preference.JSONData.CompactMode, "User's explicit false should override org's true")
+	})
+}
+
 func insertPrefs(t testing.TB, store store, preferences ...pref.Preference) {
 	t.Helper()
 	for _, p := range preferences {

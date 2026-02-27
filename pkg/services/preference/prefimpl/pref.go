@@ -272,11 +272,12 @@ func (s *Service) Delete(ctx context.Context, cmd *pref.DeleteCommand) error {
 }
 
 func preferenceData(cmd *pref.SavePreferenceCommand) (*pref.PreferenceJSONData, error) {
-	compactMode := cmd.CompactMode
 	jsonData := &pref.PreferenceJSONData{
 		Language:       cmd.Language,
 		RegionalFormat: cmd.RegionalFormat,
-		CompactMode:    &compactMode,
+	}
+	if cmd.CompactMode != nil {
+		jsonData.CompactMode = cmd.CompactMode
 	}
 	if cmd.Navbar != nil {
 		jsonData.Navbar = *cmd.Navbar
