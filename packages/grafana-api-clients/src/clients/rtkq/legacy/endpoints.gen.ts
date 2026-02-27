@@ -5203,7 +5203,13 @@ export type AddInviteForm = {
   role?: 'None' | 'Viewer' | 'Editor' | 'Admin';
   sendEmail?: boolean;
 };
+export type PreferencesBookmarkItemPreference = {
+  category?: string;
+  tags?: string[];
+  url?: string;
+};
 export type PreferencesNavbarPreference = {
+  bookmarkItems?: PreferencesBookmarkItemPreference[];
   bookmarkUrls?: string[];
 };
 export type PreferencesQueryHistoryPreference = {
@@ -5228,7 +5234,13 @@ export type PreferencesSpec = {
   weekStart?: string;
 };
 export type NavbarPreference = {
+  bookmarkItems?: BookmarkItemPreference[];
   bookmarkUrls?: string[];
+};
+export type BookmarkItemPreference = {
+  category?: string;
+  tags?: string[];
+  url?: string;
 };
 export type QueryHistoryPreference = {
   homeTab?: string;

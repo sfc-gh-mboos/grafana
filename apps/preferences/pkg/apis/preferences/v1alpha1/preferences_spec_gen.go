@@ -14,14 +14,28 @@ func NewPreferencesQueryHistoryPreference() *PreferencesQueryHistoryPreference {
 }
 
 // +k8s:openapi-gen=true
+type PreferencesBookmarkItemPreference struct {
+	Url      string   `json:"url"`
+	Category string   `json:"category,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+}
+
+// NewPreferencesBookmarkItemPreference creates a new PreferencesBookmarkItemPreference object.
+func NewPreferencesBookmarkItemPreference() *PreferencesBookmarkItemPreference {
+	return &PreferencesBookmarkItemPreference{}
+}
+
+// +k8s:openapi-gen=true
 type PreferencesNavbarPreference struct {
-	BookmarkUrls []string `json:"bookmarkUrls"`
+	BookmarkUrls  []string                            `json:"bookmarkUrls"`
+	BookmarkItems []PreferencesBookmarkItemPreference `json:"bookmarkItems,omitempty"`
 }
 
 // NewPreferencesNavbarPreference creates a new PreferencesNavbarPreference object.
 func NewPreferencesNavbarPreference() *PreferencesNavbarPreference {
 	return &PreferencesNavbarPreference{
-		BookmarkUrls: []string{},
+		BookmarkUrls:  []string{},
+		BookmarkItems: []PreferencesBookmarkItemPreference{},
 	}
 }
 

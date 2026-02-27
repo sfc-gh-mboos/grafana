@@ -13,6 +13,7 @@ import { useGrafana } from 'app/core/context/GrafanaContext';
 import { setBookmark } from 'app/core/reducers/navBarTree';
 import { useDispatch, useSelector } from 'app/types/store';
 
+import { createBookmarkPreferenceItem, withDerivedBookmarkMetadata } from './bookmarks';
 import { MegaMenuExtensionPoint } from './MegaMenuExtensionPoint';
 import { MegaMenuHeader } from './MegaMenuHeader';
 import { MegaMenuItem } from './MegaMenuItem';
@@ -40,12 +41,13 @@ export const MegaMenu = memo(
     const navItems = navTree
       .filter((item) => item.id !== 'profile' && item.id !== 'help')
       .map((item) => enrichWithInteractionTracking(item, state.megaMenuDocked));
+    const navItemsWithoutBookmarks = navItems.filter((item) => item.id !== 'bookmarks');
 
     const bookmarksItem = navItems.find((item) => item.id === 'bookmarks');
     if (bookmarksItem) {
       // Add children to the bookmarks section
-      bookmarksItem.children = pinnedItems.reduce((acc: NavModelItem[], url) => {
-        const item = findByUrl(navItems, url);
+      bookmarksItem.children = pinnedItems.reduce((acc: NavModelItem[], bookmark) => {
+        const item = findByUrl(navItemsWithoutBookmarks, bookmark.url);
         if (!item) {
           return acc;
         }
@@ -74,7 +76,7 @@ export const MegaMenu = memo(
         if (!url || !pinnedItems?.length) {
           return false;
         }
-        return pinnedItems?.includes(url);
+        return pinnedItems.some((pinnedItem) => pinnedItem.url === url);
       },
       [pinnedItems]
     );
@@ -83,7 +85,15 @@ export const MegaMenu = memo(
       const { url } = item;
       if (url) {
         const isSaved = isPinned(url);
-        const newItems = isSaved ? pinnedItems.filter((i) => url !== i) : [...pinnedItems, url];
+        const normalizedBookmarks = pinnedItems.map((bookmark) => {
+          const navItem = findByUrl(navItemsWithoutBookmarks, bookmark.url) ?? undefined;
+          return withDerivedBookmarkMetadata(bookmark, navItem);
+        });
+        const addedBookmark = createBookmarkPreferenceItem(item) ?? withDerivedBookmarkMetadata({ url }, item);
+        const newItems = isSaved
+          ? normalizedBookmarks.filter((bookmark) => bookmark.url !== url)
+          : [...normalizedBookmarks, addedBookmark];
+        const newUrls = newItems.map((bookmark) => bookmark.url);
         const interactionName = isSaved ? 'grafana_nav_item_unpinned' : 'grafana_nav_item_pinned';
         reportInteraction(interactionName, {
           path: url,
@@ -91,7 +101,8 @@ export const MegaMenu = memo(
         patchPreferences({
           patchPrefsCmd: {
             navbar: {
-              bookmarkUrls: newItems,
+              bookmarkItems: newItems,
+              bookmarkUrls: newUrls,
             },
           },
         }).then((data) => {

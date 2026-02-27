@@ -16,6 +16,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 	return map[string]common.OpenAPIDefinition{
 		"github.com/grafana/grafana/apps/preferences/pkg/apis/preferences/v1alpha1.Preferences":                       schema_pkg_apis_preferences_v1alpha1_Preferences(ref),
 		"github.com/grafana/grafana/apps/preferences/pkg/apis/preferences/v1alpha1.PreferencesList":                   schema_pkg_apis_preferences_v1alpha1_PreferencesList(ref),
+		"github.com/grafana/grafana/apps/preferences/pkg/apis/preferences/v1alpha1.PreferencesBookmarkItemPreference": schema_pkg_apis_preferences_v1alpha1_PreferencesBookmarkItemPreference(ref),
 		"github.com/grafana/grafana/apps/preferences/pkg/apis/preferences/v1alpha1.PreferencesNavbarPreference":       schema_pkg_apis_preferences_v1alpha1_PreferencesNavbarPreference(ref),
 		"github.com/grafana/grafana/apps/preferences/pkg/apis/preferences/v1alpha1.PreferencesQueryHistoryPreference": schema_pkg_apis_preferences_v1alpha1_PreferencesQueryHistoryPreference(ref),
 		"github.com/grafana/grafana/apps/preferences/pkg/apis/preferences/v1alpha1.PreferencesSpec":                   schema_pkg_apis_preferences_v1alpha1_PreferencesSpec(ref),
@@ -112,6 +113,45 @@ func schema_pkg_apis_preferences_v1alpha1_PreferencesList(ref common.ReferenceCa
 	}
 }
 
+func schema_pkg_apis_preferences_v1alpha1_PreferencesBookmarkItemPreference(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"url": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"category": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"tags": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"url"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_preferences_v1alpha1_PreferencesNavbarPreference(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -132,10 +172,25 @@ func schema_pkg_apis_preferences_v1alpha1_PreferencesNavbarPreference(ref common
 							},
 						},
 					},
+					"bookmarkItems": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/grafana/grafana/apps/preferences/pkg/apis/preferences/v1alpha1.PreferencesBookmarkItemPreference"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"bookmarkUrls"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/grafana/grafana/apps/preferences/pkg/apis/preferences/v1alpha1.PreferencesBookmarkItemPreference"},
 	}
 }
 

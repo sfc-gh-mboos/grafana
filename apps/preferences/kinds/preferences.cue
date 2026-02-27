@@ -46,6 +46,13 @@ preferencesV1alpha1: {
 
 		#NavbarPreference: {
 			bookmarkUrls: [...string]
+			bookmarkItems?: [...#BookmarkItemPreference]
+		}
+
+		#BookmarkItemPreference: {
+			url: string
+			category?: string
+			tags?: [...string]
 		} 
 	}
 }

@@ -92,8 +92,15 @@ type QueryHistoryPreference struct {
 	HomeTab string `json:"homeTab"`
 }
 
+type BookmarkItemPreference struct {
+	URL      string   `json:"url"`
+	Category string   `json:"category,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+}
+
 type NavbarPreference struct {
-	BookmarkUrls []string `json:"bookmarkUrls"`
+	BookmarkUrls  []string                 `json:"bookmarkUrls"`
+	BookmarkItems []BookmarkItemPreference `json:"bookmarkItems,omitempty"`
 }
 
 func (j *PreferenceJSONData) FromDB(data []byte) error {

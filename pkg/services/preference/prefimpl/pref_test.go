@@ -445,6 +445,89 @@ func TestSave(t *testing.T) {
 	})
 }
 
+func TestPatch_bookmarkMetadata(t *testing.T) {
+	prefService := &Service{
+		store:    newFake(),
+		defaults: prefsFromConfig(setting.NewCfg()),
+	}
+
+	orgID := int64(123)
+	firstURLs := []string{"/dashboards", "/admin/users"}
+	firstItems := []pref.BookmarkItemPreference{
+		{URL: "/dashboards", Category: "Dashboards", Tags: []string{"dashboards"}},
+		{URL: "/admin/users", Category: "Administration", Tags: []string{"admin", "users"}},
+	}
+
+	err := prefService.Patch(context.Background(), &pref.PatchPreferenceCommand{
+		OrgID: orgID,
+		Navbar: &pref.NavbarPreference{
+			BookmarkUrls:  firstURLs,
+			BookmarkItems: firstItems,
+		},
+	})
+	require.NoError(t, err)
+
+	stored := prefService.store.(*inmemStore).preference[preferenceKey{OrgID: orgID}]
+	require.Equal(t, firstURLs, stored.JSONData.Navbar.BookmarkUrls)
+	require.Equal(t, firstItems, stored.JSONData.Navbar.BookmarkItems)
+
+	secondItems := []pref.BookmarkItemPreference{
+		{URL: "/dashboards", Category: "Observability", Tags: []string{"metrics"}},
+	}
+	err = prefService.Patch(context.Background(), &pref.PatchPreferenceCommand{
+		OrgID: orgID,
+		Navbar: &pref.NavbarPreference{
+			BookmarkItems: secondItems,
+		},
+	})
+	require.NoError(t, err)
+
+	stored = prefService.store.(*inmemStore).preference[preferenceKey{OrgID: orgID}]
+	require.Equal(t, firstURLs, stored.JSONData.Navbar.BookmarkUrls)
+	require.Equal(t, secondItems, stored.JSONData.Navbar.BookmarkItems)
+}
+
+func TestGetWithDefaults_bookmarkMetadata(t *testing.T) {
+	prefService := &Service{
+		store:    newFake(),
+		defaults: prefsFromConfig(setting.NewCfg()),
+	}
+
+	orgBookmarks := []pref.BookmarkItemPreference{
+		{URL: "/dashboards", Category: "Dashboards", Tags: []string{"dashboards"}},
+	}
+	userBookmarks := []pref.BookmarkItemPreference{
+		{URL: "/admin", Category: "Administration", Tags: []string{"admin"}},
+	}
+
+	insertPrefs(t, prefService.store,
+		pref.Preference{
+			OrgID: 1,
+			JSONData: &pref.PreferenceJSONData{
+				Navbar: pref.NavbarPreference{
+					BookmarkUrls:  []string{"/dashboards"},
+					BookmarkItems: orgBookmarks,
+				},
+			},
+		},
+		pref.Preference{
+			OrgID:  1,
+			UserID: 7,
+			JSONData: &pref.PreferenceJSONData{
+				Navbar: pref.NavbarPreference{
+					BookmarkUrls:  []string{"/admin"},
+					BookmarkItems: userBookmarks,
+				},
+			},
+		},
+	)
+
+	preference, err := prefService.GetWithDefaults(context.Background(), &pref.GetPreferenceWithDefaultsQuery{OrgID: 1, UserID: 7})
+	require.NoError(t, err)
+	require.Equal(t, []string{"/admin"}, preference.JSONData.Navbar.BookmarkUrls)
+	require.Equal(t, userBookmarks, preference.JSONData.Navbar.BookmarkItems)
+}
+
 func insertPrefs(t testing.TB, store store, preferences ...pref.Preference) {
 	t.Helper()
 	for _, p := range preferences {

@@ -15,11 +15,19 @@ export interface QueryHistoryPreference {
   homeTab?: string;
 }
 
+export interface BookmarkItemPreference {
+  category?: string;
+  tags?: Array<string>;
+  url: string;
+}
+
 export interface NavbarPreference {
+  bookmarkItems?: Array<BookmarkItemPreference>;
   bookmarkUrls: Array<string>;
 }
 
 export const defaultNavbarPreference: Partial<NavbarPreference> = {
+  bookmarkItems: [],
   bookmarkUrls: [],
 };
 

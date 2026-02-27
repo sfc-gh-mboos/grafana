@@ -83,6 +83,10 @@ func (s *Service) GetWithDefaults(ctx context.Context, query *pref.GetPreference
 			if p.JSONData.Navbar.BookmarkUrls != nil {
 				res.JSONData.Navbar.BookmarkUrls = p.JSONData.Navbar.BookmarkUrls
 			}
+
+			if p.JSONData.Navbar.BookmarkItems != nil {
+				res.JSONData.Navbar.BookmarkItems = p.JSONData.Navbar.BookmarkItems
+			}
 		}
 	}
 
@@ -200,6 +204,13 @@ func (s *Service) Patch(ctx context.Context, cmd *pref.PatchPreferenceCommand) e
 			preference.JSONData = &pref.PreferenceJSONData{}
 		}
 		preference.JSONData.Navbar.BookmarkUrls = cmd.Navbar.BookmarkUrls
+	}
+
+	if cmd.Navbar != nil && cmd.Navbar.BookmarkItems != nil {
+		if preference.JSONData == nil {
+			preference.JSONData = &pref.PreferenceJSONData{}
+		}
+		preference.JSONData.Navbar.BookmarkItems = cmd.Navbar.BookmarkItems
 	}
 
 	if cmd.QueryHistory != nil {

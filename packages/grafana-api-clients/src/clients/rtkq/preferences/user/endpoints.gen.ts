@@ -26,7 +26,13 @@ export type UpdateUserPreferencesApiResponse =
 export type UpdateUserPreferencesApiArg = {
   updatePrefsCmd: UpdatePrefsCmd;
 };
+export type PreferencesBookmarkItemPreference = {
+  category?: string;
+  tags?: string[];
+  url?: string;
+};
 export type PreferencesNavbarPreference = {
+  bookmarkItems?: PreferencesBookmarkItemPreference[];
   bookmarkUrls?: string[];
 };
 export type PreferencesQueryHistoryPreference = {
@@ -63,7 +69,13 @@ export type ErrorResponseBody = {
 export type SuccessResponseBody = {
   message?: string;
 };
+export type BookmarkItemPreference = {
+  category?: string;
+  tags?: string[];
+  url?: string;
+};
 export type NavbarPreference = {
+  bookmarkItems?: BookmarkItemPreference[];
   bookmarkUrls?: string[];
 };
 export type QueryHistoryPreference = {
