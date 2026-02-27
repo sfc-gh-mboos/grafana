@@ -6,9 +6,15 @@ export interface BookmarkPreferenceItem {
   tags?: string[];
 }
 
+interface RawBookmarkPreferenceItem {
+  url?: string;
+  category?: string;
+  tags?: string[];
+}
+
 interface NavbarPreferenceWithMetadata {
   bookmarkUrls?: string[];
-  bookmarkItems?: BookmarkPreferenceItem[];
+  bookmarkItems?: RawBookmarkPreferenceItem[];
 }
 
 const URL_SEGMENT_SEPARATOR = /[/?#=&]+/;
@@ -87,7 +93,13 @@ export const normalizeBookmarkPreferences = (navbar?: NavbarPreferenceWithMetada
       continue;
     }
 
-    items.push(withDerivedBookmarkMetadata(item));
+    items.push(
+      withDerivedBookmarkMetadata({
+        url: item.url,
+        category: item.category,
+        tags: item.tags,
+      })
+    );
     seenUrls.add(item.url);
   }
 
