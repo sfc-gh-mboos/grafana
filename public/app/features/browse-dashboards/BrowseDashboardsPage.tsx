@@ -75,6 +75,12 @@ const BrowseDashboardsPage = memo(({ queryParams }: { queryParams: Record<string
     }
   }, [isSearching, searchState.result, stateManager]);
 
+  useEffect(() => {
+    // #region agent log H4 browse search state transitions
+    fetch('http://127.0.0.1:7244/ingest/d00961ff-0cb8-49cb-a2b4-3f18e48a37c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'78f326'},body:JSON.stringify({sessionId:'78f326',runId:'pre-fix',hypothesisId:'H4',location:'BrowseDashboardsPage.tsx:searchStateEffect',message:'Browse search state snapshot',data:{isSearching,queryType:typeof searchState.query,queryValue:searchState.query,resultRows:searchState.result?.totalRows ?? null,includePanels:searchState.includePanels},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [isSearching, searchState.includePanels, searchState.query, searchState.result?.totalRows]);
+
   // Emit exposure event for A/A test once when page loads
   const hasEmittedExposureEvent = useRef(false);
 
@@ -205,7 +211,15 @@ const BrowseDashboardsPage = memo(({ queryParams }: { queryParams: Record<string
             placeholder={getSearchPlaceholder(searchState.includePanels)}
             value={searchState.query}
             escapeRegex={false}
-            onChange={(e) => stateManager.onQueryChange(e)}
+            onChange={(value) => {
+              // #region agent log H1 input payload type
+              fetch('http://127.0.0.1:7244/ingest/d00961ff-0cb8-49cb-a2b4-3f18e48a37c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'49cf6c'},body:JSON.stringify({sessionId:'49cf6c',runId:'pre-fix',hypothesisId:'H1',location:'BrowseDashboardsPage.tsx:onFilterInputChange',message:'FilterInput onChange value observed',data:{valueType:typeof value,valuePreview:String(value).slice(0,120),valueLength:typeof value === 'string' ? value.length : null},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+              // #region agent log H4 input payload type current session
+              fetch('http://127.0.0.1:7244/ingest/d00961ff-0cb8-49cb-a2b4-3f18e48a37c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'78f326'},body:JSON.stringify({sessionId:'78f326',runId:'pre-fix',hypothesisId:'H4',location:'BrowseDashboardsPage.tsx:onFilterInputChange',message:'FilterInput onChange value observed current debug session',data:{valueType:typeof value,valuePreview:String(value).slice(0,120),valueLength:typeof value === 'string' ? value.length : null},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+              stateManager.onQueryChange(value);
+            }}
           />
         </div>
 
