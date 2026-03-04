@@ -874,6 +874,25 @@ func (d *dashboardStore) FindDashboards(ctx context.Context, query *dashboards.F
 		filters = append(filters, searchstore.TagsFilter{Tags: query.Tags})
 	}
 
+	if len(query.CreatedByUIDs) > 0 {
+		filters = append(filters, searchstore.CreatedByUIDFilter{
+			Dialect: d.store.GetDialect(),
+			UIDs:    query.CreatedByUIDs,
+		})
+	}
+
+	if query.UpdatedAfter > 0 {
+		filters = append(filters, searchstore.UpdatedAfterFilter{
+			Time: time.UnixMilli(query.UpdatedAfter).UTC(),
+		})
+	}
+
+	if query.UpdatedBefore > 0 {
+		filters = append(filters, searchstore.UpdatedBeforeFilter{
+			Time: time.UnixMilli(query.UpdatedBefore).UTC(),
+		})
+	}
+
 	if len(query.DashboardUIDs) > 0 {
 		filters = append(filters, searchstore.DashboardFilter{UIDs: query.DashboardUIDs})
 	} else if len(query.DashboardIds) > 0 {

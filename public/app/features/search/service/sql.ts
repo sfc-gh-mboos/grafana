@@ -23,6 +23,9 @@ interface APIQuery {
   starred?: boolean;
   permission?: PermissionLevel;
   deleted?: boolean;
+  author?: string;
+  updatedAfter?: number;
+  updatedBefore?: number;
 }
 
 // Internal object to hold folderId
@@ -90,6 +93,9 @@ export class SQLSearcher implements GrafanaSearcher {
         permission: query.permission,
         page,
         deleted: query.deleted,
+        author: query.author,
+        updatedAfter: query.updatedAfter,
+        updatedBefore: query.updatedBefore,
       },
       query
     );
@@ -108,6 +114,9 @@ export class SQLSearcher implements GrafanaSearcher {
         tag: query.tags,
         sort: query.sort,
         starred: query.starred,
+        author: query.author,
+        updatedAfter: query.updatedAfter,
+        updatedBefore: query.updatedBefore,
       },
       query
     );

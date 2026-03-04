@@ -86,6 +86,30 @@ func getBleveDocMappings(fields resource.SearchableDocumentFields, selectableFie
 		DocValues:          false,
 	})
 
+	mapper.AddFieldMappingsAt(resource.SEARCH_FIELD_CREATED_BY, &mapping.FieldMapping{
+		Name:               resource.SEARCH_FIELD_CREATED_BY,
+		Type:               "text",
+		Analyzer:           keyword.Name,
+		Store:              false,
+		Index:              true,
+		IncludeTermVectors: false,
+		IncludeInAll:       false,
+		DocValues:          false,
+	})
+
+	mapper.AddFieldMappingsAt(resource.SEARCH_FIELD_UPDATED_BY, &mapping.FieldMapping{
+		Name:               resource.SEARCH_FIELD_UPDATED_BY,
+		Type:               "text",
+		Analyzer:           keyword.Name,
+		Store:              false,
+		Index:              true,
+		IncludeTermVectors: false,
+		IncludeInAll:       false,
+		DocValues:          false,
+	})
+
+	mapper.AddFieldMappingsAt(resource.SEARCH_FIELD_UPDATED, mapping.NewNumericFieldMapping())
+
 	folderMapping := &mapping.FieldMapping{
 		Name:               resource.SEARCH_FIELD_FOLDER,
 		Type:               "text",

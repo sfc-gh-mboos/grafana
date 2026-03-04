@@ -115,6 +115,8 @@ func testBleveBackend(t *testing.T, backend *bleveBackend) {
 								utils.LabelKeyDeprecatedInternalID: "10", // nolint:staticcheck
 							},
 							Tags:            []string{"aa", "bb"},
+							CreatedBy:       "user:u_1",
+							Updated:         1700000000000,
 							OwnerReferences: []string{"iam.grafana.app/Team/engineering"},
 							Manager: &utils.ManagerProperties{
 								Kind:     utils.ManagerKindRepo,
@@ -150,6 +152,8 @@ func testBleveBackend(t *testing.T, backend *bleveBackend) {
 								"region":                           "east",
 								utils.LabelKeyDeprecatedInternalID: "11", // nolint:staticcheck
 							},
+							CreatedBy:       "user:u_2",
+							Updated:         1800000000000,
 							OwnerReferences: []string{"iam.grafana.app/Team/marketing", "iam.grafana.app/User/admin"},
 							Manager: &utils.ManagerProperties{
 								Kind:     utils.ManagerKindRepo,
@@ -315,6 +319,38 @@ func testBleveBackend(t *testing.T, backend *bleveBackend) {
 		names := []string{rsp.Results.Rows[0].Key.Name, rsp.Results.Rows[1].Key.Name}
 		assert.Contains(t, names, "aaa")
 		assert.Contains(t, names, "bbb")
+
+		// search by createdBy
+		rsp, err = index.Search(ctx, NewStubAccessClient(map[string]bool{"dashboards": true}), &resourcepb.ResourceSearchRequest{
+			Options: &resourcepb.ListOptions{
+				Key: key,
+				Fields: []*resourcepb.Requirement{{
+					Key:      resource.SEARCH_FIELD_CREATED_BY,
+					Operator: "=",
+					Values:   []string{"user:u_1"},
+				}},
+			},
+			Limit: 100000,
+		}, nil, nil)
+		require.NoError(t, err)
+		require.Equal(t, int64(1), rsp.TotalHits)
+		require.Equal(t, "aaa", rsp.Results.Rows[0].Key.Name)
+
+		// search by updated timestamp range
+		rsp, err = index.Search(ctx, NewStubAccessClient(map[string]bool{"dashboards": true}), &resourcepb.ResourceSearchRequest{
+			Options: &resourcepb.ListOptions{
+				Key: key,
+				Fields: []*resourcepb.Requirement{{
+					Key:      resource.SEARCH_FIELD_UPDATED,
+					Operator: "gt",
+					Values:   []string{"1750000000000"},
+				}},
+			},
+			Limit: 100000,
+		}, nil, nil)
+		require.NoError(t, err)
+		require.Equal(t, int64(1), rsp.TotalHits)
+		require.Equal(t, "bbb", rsp.Results.Rows[0].Key.Name)
 
 		// can get sprinkles fields and sort by them
 		rsp, err = index.Search(ctx, NewStubAccessClient(map[string]bool{"dashboards": true}), &resourcepb.ResourceSearchRequest{

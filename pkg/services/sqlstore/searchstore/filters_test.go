@@ -2,6 +2,7 @@ package searchstore_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/grafana/grafana/pkg/services/sqlstore/searchstore"
 	"github.com/grafana/grafana/pkg/util/testutil"
@@ -100,4 +101,34 @@ func TestTitleFilter(t *testing.T) {
 			assert.Equal(t, tc.expectedParams, params)
 		})
 	}
+}
+
+func TestCreatedByUIDFilter(t *testing.T) {
+	store := setupTestEnvironment(t)
+
+	filter := searchstore.CreatedByUIDFilter{
+		Dialect: store.GetDialect(),
+		UIDs:    []string{"u_1", "u_2"},
+	}
+
+	join := filter.LeftJoin()
+	assert.Contains(t, join, "created_by_user.id = dashboard.created_by")
+
+	sql, params := filter.Where()
+	assert.Equal(t, "created_by_user.uid IN (?,?)", sql)
+	assert.Equal(t, []any{"u_1", "u_2"}, params)
+}
+
+func TestUpdatedTimestampFilters(t *testing.T) {
+	ts := time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
+
+	after := searchstore.UpdatedAfterFilter{Time: ts}
+	sql, params := after.Where()
+	assert.Equal(t, "dashboard.updated >= ?", sql)
+	assert.Equal(t, []any{ts}, params)
+
+	before := searchstore.UpdatedBeforeFilter{Time: ts}
+	sql, params = before.Where()
+	assert.Equal(t, "dashboard.updated <= ?", sql)
+	assert.Equal(t, []any{ts}, params)
 }

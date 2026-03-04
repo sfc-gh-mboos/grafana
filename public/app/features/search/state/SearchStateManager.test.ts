@@ -51,11 +51,20 @@ describe('SearchStateManager', () => {
   describe('initStateFromUrl', () => {
     it('should read and set state from URL and trigger search', async () => {
       const stm = getSearchStateManager();
-      locationService.partial({ query: 'test', tag: ['tag1', 'tag2'] });
+      locationService.partial({
+        query: 'test',
+        tag: ['tag1', 'tag2'],
+        author: 'u_123',
+        authorLogin: 'alice',
+        updatedWithin: '7d',
+      });
       stm.initStateFromUrl();
       expect(stm.state.folderUid).toBe(undefined);
       expect(stm.state.query).toBe('test');
       expect(stm.state.tag).toEqual(['tag1', 'tag2']);
+      expect(stm.state.author).toBe('u_123');
+      expect(stm.state.authorLogin).toBe('alice');
+      expect(stm.state.updatedWithin).toBe('7d');
     });
 
     it('should init or clear folderUid', async () => {
@@ -128,6 +137,18 @@ describe('SearchStateManager', () => {
       jest.advanceTimersByTime(150);
 
       await waitFor(() => expect(stm.state.result?.totalRows).toEqual(10));
+    });
+
+    it('should include author and updatedAfter in search query', () => {
+      const stm = getSearchStateManager();
+      jest.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+
+      stm.onAuthorFilterChange('u_123', 'alice');
+      stm.onUpdatedWithinChange('7d');
+
+      const query = stm.getSearchQuery();
+      expect(query.author).toBe('u_123');
+      expect(query.updatedAfter).toBe(Date.now() - 7 * 24 * 60 * 60 * 1000);
     });
   });
 });

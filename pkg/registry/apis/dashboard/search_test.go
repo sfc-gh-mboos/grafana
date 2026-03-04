@@ -1018,6 +1018,43 @@ func TestConvertHttpSearchRequestToResourceSearchRequest(t *testing.T) {
 				Federated: []*resourcepb.ResourceKey{folderKey},
 			},
 		},
+		"author filter": {
+			queryString: "author=u_123",
+			expected: &resourcepb.ResourceSearchRequest{
+				Options: &resourcepb.ListOptions{
+					Key: dashboardKey,
+					Fields: []*resourcepb.Requirement{
+						{Key: resource.SEARCH_FIELD_CREATED_BY, Operator: "=", Values: []string{"user:u_123"}},
+					},
+				},
+				Query:     "",
+				Limit:     50,
+				Offset:    0,
+				Page:      1,
+				Explain:   false,
+				Fields:    defaultFields,
+				Federated: []*resourcepb.ResourceKey{folderKey},
+			},
+		},
+		"updated range filter": {
+			queryString: "updatedAfter=1000&updatedBefore=2000",
+			expected: &resourcepb.ResourceSearchRequest{
+				Options: &resourcepb.ListOptions{
+					Key: dashboardKey,
+					Fields: []*resourcepb.Requirement{
+						{Key: resource.SEARCH_FIELD_UPDATED, Operator: "gt", Values: []string{"1000"}},
+						{Key: resource.SEARCH_FIELD_UPDATED, Operator: "lt", Values: []string{"2000"}},
+					},
+				},
+				Query:     "",
+				Limit:     50,
+				Offset:    0,
+				Page:      1,
+				Explain:   false,
+				Fields:    defaultFields,
+				Federated: []*resourcepb.ResourceKey{folderKey},
+			},
+		},
 		"folder filter": {
 			queryString: "folder=my-folder",
 			expected: &resourcepb.ResourceSearchRequest{

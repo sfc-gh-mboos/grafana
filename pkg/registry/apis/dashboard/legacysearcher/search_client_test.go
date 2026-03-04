@@ -445,6 +445,9 @@ func TestDashboardSearchClient_Search(t *testing.T) {
 			DashboardUIDs: []string{"uid1", "uid2"},
 			Tags:          []string{"tag1", "tag2"},
 			FolderUIDs:    []string{"general", "folder1"},
+			CreatedByUIDs: []string{"u_123"},
+			UpdatedAfter:  1000,
+			UpdatedBefore: 2000,
 			SignedInUser:  user,      // user from context should be used
 			Type:          "dash-db", // should set type based off of key
 		}).Return([]dashboards.DashboardSearchProjection{
@@ -456,6 +459,9 @@ func TestDashboardSearchClient_Search(t *testing.T) {
 			DashboardUIDs: []string{"uid1", "uid2"},
 			Tags:          []string{"tag1", "tag2"},
 			FolderUIDs:    []string{"general", "folder1"},
+			CreatedByUIDs: []string{"u_123"},
+			UpdatedAfter:  1000,
+			UpdatedBefore: 2000,
 			SignedInUser:  user,
 			Type:          "dash-db",
 			Limit:         0,
@@ -482,6 +488,21 @@ func TestDashboardSearchClient_Search(t *testing.T) {
 						Key:      resource.SEARCH_FIELD_FOLDER,
 						Operator: "in",
 						Values:   []string{"", "folder1"}, // empty folder should be general
+					},
+					{
+						Key:      resource.SEARCH_FIELD_CREATED_BY,
+						Operator: "in",
+						Values:   []string{"user:u_123"},
+					},
+					{
+						Key:      resource.SEARCH_FIELD_UPDATED,
+						Operator: string(selection.GreaterThan),
+						Values:   []string{"1000"},
+					},
+					{
+						Key:      resource.SEARCH_FIELD_UPDATED,
+						Operator: string(selection.LessThan),
+						Values:   []string{"2000"},
 					},
 				},
 			},

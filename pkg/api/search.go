@@ -34,6 +34,9 @@ func (hs *HTTPServer) Search(c *contextmodel.ReqContext) response.Response {
 	dashboardType := c.Query("type")
 	sort := c.Query("sort")
 	deleted := c.Query("deleted")
+	author := c.Query("author")
+	updatedAfter := c.QueryInt64("updatedAfter")
+	updatedBefore := c.QueryInt64("updatedBefore")
 	permission := dashboardaccess.PERMISSION_VIEW
 
 	if deleted == "true" && c.GetOrgRole() != org.RoleAdmin {
@@ -96,6 +99,9 @@ func (hs *HTTPServer) Search(c *contextmodel.ReqContext) response.Response {
 		FolderUIDs:    folderUIDs,
 		Permission:    permission,
 		Sort:          sort,
+		Author:        author,
+		UpdatedAfter:  updatedAfter,
+		UpdatedBefore: updatedBefore,
 	}
 
 	hits, err := hs.SearchService.SearchHandler(c.Req.Context(), &searchQuery)
@@ -201,6 +207,18 @@ type SearchParams struct {
 	// default: alpha-asc
 	// Enum: alpha-asc,alpha-desc
 	Sort string `json:"sort"`
+	// Filter dashboards by author UID.
+	// in:query
+	// required: false
+	Author string `json:"author"`
+	// Return dashboards updated after this Unix timestamp in milliseconds.
+	// in:query
+	// required: false
+	UpdatedAfter int64 `json:"updatedAfter"`
+	// Return dashboards updated before this Unix timestamp in milliseconds.
+	// in:query
+	// required: false
+	UpdatedBefore int64 `json:"updatedBefore"`
 	// Flag indicating if only soft deleted Dashboards should be returned
 	// in:query
 	// required: false

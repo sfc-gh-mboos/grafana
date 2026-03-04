@@ -1,14 +1,30 @@
 import { css } from '@emotion/css';
-import { FormEvent } from 'react';
+import debounce from 'debounce-promise';
+import { FormEvent, useMemo } from 'react';
 
 import { GrafanaTheme2, SelectableValue } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
-import { config } from '@grafana/runtime';
-import { Button, Checkbox, Stack, RadioButtonGroup, useStyles2 } from '@grafana/ui';
+import { config, getBackendSrv } from '@grafana/runtime';
+import { AsyncSelect, Button, Checkbox, RadioButtonGroup, Select, Stack, useStyles2 } from '@grafana/ui';
 import { SortPicker } from 'app/core/components/Select/SortPicker';
 import { TagFilter, TermCount } from 'app/core/components/TagFilter/TagFilter';
+import { OrgUser } from 'app/types/user';
 
-import { SearchLayout, SearchState } from '../../types';
+import { SearchLayout, SearchState, UpdatedWithinOption } from '../../types';
+
+interface AuthorOption extends SelectableValue<string> {
+  id: number;
+  uid: string;
+  login: string;
+  imgUrl?: string;
+}
+
+const updatedWithinFilterOptions: Array<SelectableValue<UpdatedWithinOption>> = [
+  { value: '24h', label: t('search.actions.updated-within-24h', 'Updated in 24 hours') },
+  { value: '7d', label: t('search.actions.updated-within-7d', 'Updated in 7 days') },
+  { value: '30d', label: t('search.actions.updated-within-30d', 'Updated in 30 days') },
+  { value: '90d', label: t('search.actions.updated-within-90d', 'Updated in 90 days') },
+];
 
 function getLayoutOptions() {
   return [
@@ -36,6 +52,8 @@ interface ActionRowProps {
   onDatasourceChange: (ds?: string) => void;
   onPanelTypeChange: (pt?: string) => void;
   onSetIncludePanels: (v: boolean) => void;
+  onAuthorFilterChange?: (author?: string, authorLogin?: string) => void;
+  onUpdatedWithinChange?: (value?: UpdatedWithinOption) => void;
 }
 
 export function getValidQueryLayout(q: SearchState): SearchLayout {
@@ -43,7 +61,7 @@ export function getValidQueryLayout(q: SearchState): SearchLayout {
 
   // Folders is not valid when a query exists
   if (layout === SearchLayout.Folders) {
-    if (q.query || q.sort || q.starred || q.tag.length > 0) {
+    if (q.query || q.sort || q.starred || q.tag.length > 0 || q.author || q.updatedWithin) {
       return SearchLayout.List;
     }
   }
@@ -65,14 +83,54 @@ export const ActionRow = ({
   onDatasourceChange,
   onPanelTypeChange,
   onSetIncludePanels,
+  onAuthorFilterChange = () => {},
+  onUpdatedWithinChange = () => {},
 }: ActionRowProps) => {
   const styles = useStyles2(getStyles);
 
   const layout = getValidQueryLayout(state);
 
+  const loadAuthorOptions = useMemo(
+    () =>
+      debounce(
+        async (query = '') => {
+          const users = await getBackendSrv().get<OrgUser[]>(
+            `/api/org/users/lookup?query=${encodeURIComponent(query)}&limit=100`
+          );
+          return users.map<AuthorOption>((user) => ({
+            id: user.userId,
+            uid: user.uid,
+            login: user.login,
+            value: user.uid,
+            label: user.login,
+            imgUrl: user.avatarUrl,
+          }));
+        },
+        300,
+        { leading: true }
+      ),
+    []
+  );
+
+  const selectedAuthor: AuthorOption | null = state.author
+    ? {
+        id: 0,
+        uid: state.author,
+        login: state.authorLogin ?? state.author,
+        value: state.author,
+        label: state.authorLogin ?? state.author,
+      }
+    : null;
+
   // Disabled folder layout option when query is present
   const disabledOptions =
-    state.tag.length || state.starred || state.query || state.datasource || state.panel_type
+    state.tag.length ||
+    state.starred ||
+    state.query ||
+    state.datasource ||
+    state.panel_type ||
+    state.author ||
+    state.updatedWithin
       ? [SearchLayout.Folders]
       : [];
 
@@ -99,6 +157,33 @@ export const ActionRow = ({
             />
           </div>
         )}
+        <AsyncSelect<AuthorOption>
+          data-testid="dashboard-author-filter"
+          loadOptions={loadAuthorOptions}
+          defaultOptions={false}
+          value={selectedAuthor}
+          onChange={(option) =>
+            onAuthorFilterChange(
+              option?.uid ?? option?.value,
+              option?.login ?? option?.label
+            )
+          }
+          noOptionsMessage={t('search.actions.author-no-users', 'No users found')}
+          placeholder={t('search.actions.author-placeholder', 'Author')}
+          isClearable
+          width={24}
+          inputId="dashboard-author-filter"
+        />
+        <Select<UpdatedWithinOption>
+          data-testid="dashboard-updated-within-filter"
+          options={updatedWithinFilterOptions}
+          value={state.updatedWithin}
+          onChange={(value) => onUpdatedWithinChange(value?.value)}
+          placeholder={t('search.actions.updated-placeholder', 'Updated')}
+          isClearable
+          width={24}
+          inputId="dashboard-updated-within-filter"
+        />
         {state.datasource && (
           <Button icon="times" variant="secondary" onClick={() => onDatasourceChange(undefined)}>
             <Trans i18nKey="search.actions.remove-datasource-filter">

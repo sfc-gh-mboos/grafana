@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/kube-openapi/pkg/common"
 	"k8s.io/kube-openapi/pkg/spec3"
 	"k8s.io/kube-openapi/pkg/validation/spec"
@@ -232,6 +233,33 @@ func (s *SearchHandler) GetAPIRoutes(defs map[string]common.OpenAPIDefinition) *
 												},
 											},
 										},
+									},
+								},
+								{
+									ParameterProps: spec3.ParameterProps{
+										Name:        "author",
+										In:          "query",
+										Description: "filter by author UID",
+										Required:    false,
+										Schema:      spec.StringProperty(),
+									},
+								},
+								{
+									ParameterProps: spec3.ParameterProps{
+										Name:        "updatedAfter",
+										In:          "query",
+										Description: "filter by resources updated after a Unix timestamp in milliseconds",
+										Required:    false,
+										Schema:      spec.Int64Property(),
+									},
+								},
+								{
+									ParameterProps: spec3.ParameterProps{
+										Name:        "updatedBefore",
+										In:          "query",
+										Description: "filter by resources updated before a Unix timestamp in milliseconds",
+										Required:    false,
+										Schema:      spec.Int64Property(),
 									},
 								},
 								{
@@ -562,6 +590,54 @@ func convertHttpSearchRequestToResourceSearchRequest(queryParams url.Values, use
 			Key:      resource.SEARCH_FIELD_OWNER_REFERENCES,
 			Operator: operator,
 			Values:   vals,
+		})
+	}
+
+	if vals, ok := queryParams["author"]; ok {
+		operator := "="
+		if len(vals) > 1 {
+			operator = "in"
+		}
+
+		authorValues := make([]string, 0, len(vals))
+		for _, value := range vals {
+			if value == "" {
+				continue
+			}
+			if !strings.Contains(value, ":") {
+				value = "user:" + value
+			}
+			authorValues = append(authorValues, value)
+		}
+
+		if len(authorValues) > 0 {
+			searchRequest.Options.Fields = append(searchRequest.Options.Fields, &resourcepb.Requirement{
+				Key:      resource.SEARCH_FIELD_CREATED_BY,
+				Operator: operator,
+				Values:   authorValues,
+			})
+		}
+	}
+
+	if vals, ok := queryParams["updatedAfter"]; ok && len(vals) > 0 {
+		if _, err := strconv.ParseInt(vals[0], 10, 64); err != nil {
+			return nil, apierrors.NewBadRequest("invalid updatedAfter query parameter")
+		}
+		searchRequest.Options.Fields = append(searchRequest.Options.Fields, &resourcepb.Requirement{
+			Key:      resource.SEARCH_FIELD_UPDATED,
+			Operator: string(selection.GreaterThan),
+			Values:   []string{vals[0]},
+		})
+	}
+
+	if vals, ok := queryParams["updatedBefore"]; ok && len(vals) > 0 {
+		if _, err := strconv.ParseInt(vals[0], 10, 64); err != nil {
+			return nil, apierrors.NewBadRequest("invalid updatedBefore query parameter")
+		}
+		searchRequest.Options.Fields = append(searchRequest.Options.Fields, &resourcepb.Requirement{
+			Key:      resource.SEARCH_FIELD_UPDATED,
+			Operator: string(selection.LessThan),
+			Values:   []string{vals[0]},
 		})
 	}
 

@@ -121,6 +121,32 @@ describe('SQLSearcher', () => {
     });
   });
 
+  it('should pass author and updated time filters to search API', async () => {
+    const sqlSearcher = new SQLSearcher();
+    const query = {
+      query: 'test',
+      kind: ['dashboard'],
+      author: 'u_123',
+      updatedAfter: 1000,
+      updatedBefore: 2000,
+    };
+
+    await sqlSearcher.search(query);
+
+    expect(searchMock).toHaveBeenLastCalledWith(
+      '/api/search',
+      expect.objectContaining({
+        limit: 1000,
+        sort: undefined,
+        tag: undefined,
+        type: DashboardSearchItemType.DashDB,
+        author: 'u_123',
+        updatedAfter: 1000,
+        updatedBefore: 2000,
+      })
+    );
+  });
+
   describe('pagination', () => {
     it.each([
       { from: undefined, expectedPage: undefined },

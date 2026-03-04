@@ -37,5 +37,20 @@ describe('Search utils', () => {
         query: 'folder:current test',
       });
     });
+
+    it('should keep only valid updatedWithin values', () => {
+      expect(parseRouteParams({ updatedWithin: '7d' })).toEqual({
+        updatedWithin: '7d',
+      });
+
+      expect(parseRouteParams({ updatedWithin: 'bad-value' })).toEqual({});
+    });
+
+    it('should map author.login query key to authorLogin state key', () => {
+      expect(parseRouteParams({ author: 'u_123', 'author.login': 'admin' })).toEqual({
+        author: 'u_123',
+        authorLogin: 'admin',
+      });
+    });
   });
 });

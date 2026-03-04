@@ -263,6 +263,34 @@ func (c *DashboardSearchClient) Search(ctx context.Context, req *resourcepb.Reso
 
 			query.Title = vals[0]
 			query.TitleExactMatch = true
+		case resource.SEARCH_FIELD_CREATED_BY:
+			authorUIDs := make([]string, 0, len(vals))
+			for _, value := range vals {
+				uid := strings.TrimPrefix(value, "user:")
+				if uid != "" {
+					authorUIDs = append(authorUIDs, uid)
+				}
+			}
+			if len(authorUIDs) > 0 {
+				query.CreatedByUIDs = authorUIDs
+			}
+		case resource.SEARCH_FIELD_UPDATED:
+			if len(vals) != 1 {
+				return nil, apierrors.NewBadRequest("only one updated filter value is supported")
+			}
+			timestamp, err := strconv.ParseInt(vals[0], 10, 64)
+			if err != nil {
+				return nil, apierrors.NewBadRequest("invalid updated filter value")
+			}
+
+			switch selection.Operator(field.Operator) {
+			case selection.GreaterThan:
+				query.UpdatedAfter = timestamp
+			case selection.LessThan:
+				query.UpdatedBefore = timestamp
+			default:
+				return nil, apierrors.NewBadRequest("unsupported updated filter operator")
+			}
 		}
 	}
 

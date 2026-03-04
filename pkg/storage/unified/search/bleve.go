@@ -1616,6 +1616,8 @@ var termFields = []string{
 // exactTermFields fields to use termQuery for filtering without any extra queries
 var exactTermFields = []string{
 	resource.SEARCH_FIELD_OWNER_REFERENCES,
+	resource.SEARCH_FIELD_CREATED_BY,
+	resource.SEARCH_FIELD_UPDATED_BY,
 	// FIXME: special case for login and email to use term query only because those fields are using keyword analyzer
 	// This should be fixed by using the info from the schema
 	"login",
@@ -1690,11 +1692,45 @@ func requirementQuery(req *resourcepb.Requirement, prefix string) (query.Query, 
 
 		return boolQuery, nil
 
+	case selection.GreaterThan:
+		if len(req.Values) != 1 {
+			return nil, resource.NewBadRequestError(
+				fmt.Sprintf("unsupported query operation (%s %s %v)", req.Key, req.Operator, req.Values),
+			)
+		}
+		min, err := strconv.ParseFloat(req.Values[0], 64)
+		if err != nil {
+			return nil, resource.NewBadRequestError(
+				fmt.Sprintf("unsupported query operation (%s %s %v)", req.Key, req.Operator, req.Values),
+			)
+		}
+
+		inclusive := false
+		q := query.NewNumericRangeInclusiveQuery(&min, nil, &inclusive, nil)
+		q.SetField(prefix + req.Key)
+		return q, nil
+
+	case selection.LessThan:
+		if len(req.Values) != 1 {
+			return nil, resource.NewBadRequestError(
+				fmt.Sprintf("unsupported query operation (%s %s %v)", req.Key, req.Operator, req.Values),
+			)
+		}
+		max, err := strconv.ParseFloat(req.Values[0], 64)
+		if err != nil {
+			return nil, resource.NewBadRequestError(
+				fmt.Sprintf("unsupported query operation (%s %s %v)", req.Key, req.Operator, req.Values),
+			)
+		}
+
+		inclusive := false
+		q := query.NewNumericRangeInclusiveQuery(nil, &max, nil, &inclusive)
+		q.SetField(prefix + req.Key)
+		return q, nil
+
 	// will fall through to the BadRequestError
 	case selection.NotEquals:
 	case selection.DoesNotExist:
-	case selection.GreaterThan:
-	case selection.LessThan:
 	case selection.Exists:
 	}
 	return nil, resource.NewBadRequestError(

@@ -41,6 +41,9 @@ export interface SearchQuery {
   permission?: PermissionLevel;
   deleted?: boolean;
   offset?: number;
+  author?: string;
+  updatedAfter?: number;
+  updatedBefore?: number;
 }
 
 export interface DashboardQueryResult {

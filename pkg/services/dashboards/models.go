@@ -526,14 +526,17 @@ type FindPersistedDashboardsQuery struct {
 	DashboardUIDs   []string
 	Type            string
 	// Deprecated: use FolderUIDs instead
-	FolderIds  []int64
-	FolderUIDs []string
-	Tags       []string
-	Limit      int64
-	Page       int64
-	Permission dashboardaccess.PermissionType
-	Sort       model.SortOption
-	IsDeleted  bool
+	FolderIds     []int64
+	FolderUIDs    []string
+	Tags          []string
+	CreatedByUIDs []string
+	UpdatedAfter  int64
+	UpdatedBefore int64
+	Limit         int64
+	Page          int64
+	Permission    dashboardaccess.PermissionType
+	Sort          model.SortOption
+	IsDeleted     bool
 
 	ManagedBy            utils.ManagerKind
 	ManagerIdentity      string

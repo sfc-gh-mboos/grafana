@@ -46,10 +46,13 @@ type Query struct {
 	DashboardUIDs []string
 	DashboardIds  []int64
 	// Deprecated: use FolderUID instead
-	FolderIds  []int64
-	FolderUIDs []string
-	Permission dashboardaccess.PermissionType
-	Sort       string
+	FolderIds     []int64
+	FolderUIDs    []string
+	Permission    dashboardaccess.PermissionType
+	Sort          string
+	Author        string
+	UpdatedAfter  int64
+	UpdatedBefore int64
 }
 
 type Service interface {
@@ -105,6 +108,13 @@ func (s *SearchService) SearchHandler(ctx context.Context, query *Query) (model.
 		Page:          query.Page,
 		Permission:    query.Permission,
 		IsDeleted:     query.IsDeleted,
+		CreatedByUIDs: []string{query.Author},
+		UpdatedAfter:  query.UpdatedAfter,
+		UpdatedBefore: query.UpdatedBefore,
+	}
+
+	if query.Author == "" {
+		dashboardQuery.CreatedByUIDs = nil
 	}
 
 	if sortOpt, exists := s.sortService.GetSortOption(query.Sort); exists {

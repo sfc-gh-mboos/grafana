@@ -148,6 +148,8 @@ describe('browse-dashboards BrowseDashboardsPage', () => {
 
       expect(await screen.findByText('Sort')).toBeInTheDocument();
       expect(await screen.findByText('Filter by tag')).toBeInTheDocument();
+      expect(await screen.findByTestId('dashboard-author-filter')).toBeInTheDocument();
+      expect(await screen.findByTestId('dashboard-updated-within-filter')).toBeInTheDocument();
 
       expect(screen.queryByRole('button', { name: 'Move' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
@@ -264,6 +266,8 @@ describe('browse-dashboards BrowseDashboardsPage', () => {
 
       expect(await screen.findByText('Sort')).toBeInTheDocument();
       expect(await screen.findByText('Filter by tag')).toBeInTheDocument();
+      expect(await screen.findByTestId('dashboard-author-filter')).toBeInTheDocument();
+      expect(await screen.findByTestId('dashboard-updated-within-filter')).toBeInTheDocument();
 
       expect(screen.queryByRole('button', { name: 'Move' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();

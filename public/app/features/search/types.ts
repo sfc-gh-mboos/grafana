@@ -91,6 +91,13 @@ export interface SearchAction extends Action {
 
 export type EventTrackingNamespace = 'manage_dashboards' | 'dashboard_search';
 
+export const UPDATED_WITHIN_OPTIONS = ['24h', '7d', '30d', '90d'] as const;
+export type UpdatedWithinOption = (typeof UPDATED_WITHIN_OPTIONS)[number];
+
+export const isUpdatedWithinOption = (value: unknown): value is UpdatedWithinOption => {
+  return typeof value === 'string' && UPDATED_WITHIN_OPTIONS.includes(value as UpdatedWithinOption);
+};
+
 export interface SearchState {
   query: string;
   tag: string[];
@@ -105,6 +112,9 @@ export interface SearchState {
   loading?: boolean;
   folderUid?: string;
   includePanels?: boolean;
+  author?: string;
+  authorLogin?: string;
+  updatedWithin?: UpdatedWithinOption;
   eventTrackingNamespace: EventTrackingNamespace;
   deleted: boolean;
 }
@@ -123,6 +133,9 @@ export interface SearchQueryParams {
   tag?: string[] | null;
   layout?: SearchLayout | null;
   folder?: string | null;
+  author?: string | null;
+  authorLogin?: string | null;
+  updatedWithin?: UpdatedWithinOption | null;
 }
 
 // new Search Types

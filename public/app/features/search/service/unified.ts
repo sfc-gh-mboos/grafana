@@ -317,6 +317,18 @@ export class UnifiedSearcher implements GrafanaSearcher {
       uri += '&' + query.tags.map((tag) => `tag=${encodeURIComponent(tag)}`).join('&');
     }
 
+    if (query.author?.length) {
+      uri += `&author=${encodeURIComponent(query.author)}`;
+    }
+
+    if (query.updatedAfter) {
+      uri += `&updatedAfter=${query.updatedAfter}`;
+    }
+
+    if (query.updatedBefore) {
+      uri += `&updatedBefore=${query.updatedBefore}`;
+    }
+
     if (query.sort) {
       const sort = query.sort.replace('_sort', '').replace('name', 'title');
       uri += `&sort=${sort}`;

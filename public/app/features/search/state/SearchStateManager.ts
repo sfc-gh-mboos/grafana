@@ -15,7 +15,7 @@ import {
 } from '../page/reporting';
 import { getGrafanaSearcher } from '../service/searcher';
 import { SearchQuery } from '../service/types';
-import { SearchLayout, SearchQueryParams, SearchState } from '../types';
+import { SearchLayout, SearchQueryParams, SearchState, UpdatedWithinOption } from '../types';
 import { parseRouteParams } from '../utils';
 
 export const initialState: SearchState = {
@@ -35,6 +35,24 @@ export const defaultQueryParams: SearchQueryParams = {
   query: null,
   tag: null,
   layout: null,
+  author: null,
+  authorLogin: null,
+  updatedWithin: null,
+};
+
+const updatedWithinMilliseconds: Record<UpdatedWithinOption, number> = {
+  '24h': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+  '30d': 30 * 24 * 60 * 60 * 1000,
+  '90d': 90 * 24 * 60 * 60 * 1000,
+};
+
+const getUpdatedAfter = (updatedWithin?: UpdatedWithinOption): number | undefined => {
+  if (!updatedWithin) {
+    return undefined;
+  }
+
+  return Date.now() - updatedWithinMilliseconds[updatedWithin];
 };
 
 const getLocalStorageLayout = () => {
@@ -56,7 +74,13 @@ export class SearchStateManager extends StateManagerBase<SearchState> {
     const stateFromUrl = parseRouteParams(locationService.getSearchObject());
 
     // Force list view when conditions are specified from the URL
-    if (stateFromUrl.query || stateFromUrl.datasource || stateFromUrl.panel_type) {
+    if (
+      stateFromUrl.query ||
+      stateFromUrl.datasource ||
+      stateFromUrl.panel_type ||
+      stateFromUrl.author ||
+      stateFromUrl.updatedWithin
+    ) {
       stateFromUrl.layout = SearchLayout.List;
     }
 
@@ -97,6 +121,9 @@ export class SearchStateManager extends StateManagerBase<SearchState> {
       panel_type: this.state.panel_type,
       starred: this.state.starred ? this.state.starred : null,
       sort: this.state.sort,
+      author: this.state.author ?? null,
+      authorLogin: this.state.authorLogin ?? null,
+      updatedWithin: this.state.updatedWithin ?? null,
     });
 
     // Prevent searching when user is only clearing the input.
@@ -122,6 +149,9 @@ export class SearchStateManager extends StateManagerBase<SearchState> {
       panel_type: undefined,
       starred: undefined,
       sort: undefined,
+      author: undefined,
+      authorLogin: undefined,
+      updatedWithin: undefined,
     });
   };
 
@@ -151,6 +181,14 @@ export class SearchStateManager extends StateManagerBase<SearchState> {
 
   onPanelTypeChange = (panel_type?: string) => {
     this.setStateAndDoSearch({ panel_type });
+  };
+
+  onAuthorFilterChange = (author?: string, authorLogin?: string) => {
+    this.setStateAndDoSearch({ author, authorLogin });
+  };
+
+  onUpdatedWithinChange = (updatedWithin?: UpdatedWithinOption) => {
+    this.setStateAndDoSearch({ updatedWithin });
   };
 
   onStarredFilterChange = (e: FormEvent<HTMLInputElement>) => {
@@ -205,6 +243,8 @@ export class SearchStateManager extends StateManagerBase<SearchState> {
         this.state.tag.length ||
         this.state.starred ||
         this.state.panel_type ||
+        this.state.author ||
+        this.state.updatedWithin ||
         this.state.sort ||
         this.state.deleted ||
         this.state.layout === SearchLayout.List
@@ -223,6 +263,8 @@ export class SearchStateManager extends StateManagerBase<SearchState> {
       withAllowedActions: this.state.explain, // allowedActions are currently not used for anything on the UI and added only in `explain` mode
       starred: this.state.starred,
       deleted: this.state.deleted,
+      author: this.state.author,
+      updatedAfter: getUpdatedAfter(this.state.updatedWithin),
     };
 
     // Only dashboards have additional properties

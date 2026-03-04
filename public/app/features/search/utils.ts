@@ -1,7 +1,7 @@
 import { UrlQueryMap } from '@grafana/data';
 
 import { SECTION_STORAGE_KEY } from './constants';
-import { SearchState } from './types';
+import { isUpdatedWithinOption, SearchState } from './types';
 
 /**
  * Check if search query has filters enabled. Excludes folderId
@@ -11,7 +11,9 @@ export const hasFilters = (query: SearchState) => {
   if (!query) {
     return false;
   }
-  return Boolean(query.query || query.tag?.length > 0 || query.starred || query.sort);
+  return Boolean(
+    query.query || query.tag?.length > 0 || query.starred || query.sort || query.author || query.updatedWithin
+  );
 };
 
 /** Cleans up old local storage values that remembered many open folders */
@@ -45,10 +47,17 @@ export const parseRouteParams = (params: UrlQueryMap) => {
       return obj;
     } else if (key === 'tag' && !Array.isArray(val)) {
       return { ...obj, tag: [val] as string[] };
+    } else if (key === 'author.login') {
+      const authorLogin = Array.isArray(val) ? val[0] : val;
+      return { ...obj, authorLogin };
     }
 
     return { ...obj, [key]: val };
   }, {});
+
+  if (cleanedParams.updatedWithin && !isUpdatedWithinOption(cleanedParams.updatedWithin)) {
+    delete cleanedParams.updatedWithin;
+  }
 
   if (params.folder) {
     const folderStr = `folder:${params.folder}`;

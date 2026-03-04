@@ -197,4 +197,25 @@ describe('Unified Storage Searcher', () => {
 
     expect(results.meta?.custom?.sortBy).toBe('errors_today');
   });
+
+  it('should include author and updated filters in request URI', async () => {
+    const searchSpy = jest.spyOn(mockSearcher, 'search');
+    const searcher = new UnifiedSearcher(mockFallbackSearcher);
+
+    await searcher.search({
+      query: 'test',
+      limit: 50,
+      author: 'u_123',
+      updatedAfter: 1000,
+      updatedBefore: 2000,
+    });
+
+    const requestUris = searchSpy.mock.calls.map((call) => call[0]);
+    const searchRequest = requestUris.find((uri) => uri.includes('/search?query='));
+
+    expect(searchRequest).toBeDefined();
+    expect(searchRequest).toContain('author=u_123');
+    expect(searchRequest).toContain('updatedAfter=1000');
+    expect(searchRequest).toContain('updatedBefore=2000');
+  });
 });

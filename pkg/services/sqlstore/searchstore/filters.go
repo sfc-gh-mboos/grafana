@@ -3,6 +3,7 @@ package searchstore
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/grafana/grafana/pkg/services/accesscontrol"
 	"github.com/grafana/grafana/pkg/services/folder"
@@ -152,6 +153,59 @@ func (f TagsFilter) Where() (string, []any) {
 		params[i] = tag
 	}
 	return `dashboard_tag.term IN (?` + strings.Repeat(",?", len(f.Tags)-1) + `)`, params
+}
+
+type CreatedByUIDFilter struct {
+	Dialect migrator.Dialect
+	UIDs    []string
+}
+
+func (f CreatedByUIDFilter) LeftJoin() string {
+	if len(f.UIDs) == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%s AS created_by_user ON created_by_user.id = dashboard.created_by", f.Dialect.Quote("user"))
+}
+
+func (f CreatedByUIDFilter) Where() (string, []any) {
+	length := len(f.UIDs)
+	if length < 1 {
+		return "", nil
+	}
+
+	if length == 1 {
+		return "created_by_user.uid = ?", []any{f.UIDs[0]}
+	}
+
+	sqlArray := "(?" + strings.Repeat(",?", length-1) + ")"
+	params := make([]any, 0, length)
+	for _, uid := range f.UIDs {
+		params = append(params, uid)
+	}
+	return fmt.Sprintf("created_by_user.uid IN %s", sqlArray), params
+}
+
+type UpdatedAfterFilter struct {
+	Time time.Time
+}
+
+func (f UpdatedAfterFilter) Where() (string, []any) {
+	if f.Time.IsZero() {
+		return "", nil
+	}
+	return "dashboard.updated >= ?", []any{f.Time}
+}
+
+type UpdatedBeforeFilter struct {
+	Time time.Time
+}
+
+func (f UpdatedBeforeFilter) Where() (string, []any) {
+	if f.Time.IsZero() {
+		return "", nil
+	}
+	return "dashboard.updated <= ?", []any{f.Time}
 }
 
 type TitleSorter struct {
