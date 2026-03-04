@@ -295,3 +295,36 @@ Use admonitions sparingly.
 Only include exceptional information in admonitions.
 
 <!-- docs-ai-end -->
+
+## Cursor Cloud specific instructions
+
+Grafana is a Go + TypeScript application. Refer to `contribute/developer-guide.md` for the canonical setup guide.
+
+### Services
+
+- **Backend (Go):** Start with `make run` (uses `air` for hot-reloading). Listens on port 3000. Uses embedded SQLite by default, no external database required.
+- **Frontend (Webpack):** Start with `yarn start` (watches for changes). Outputs to `public/build/`.
+- Both must run concurrently for full functionality.
+
+### Key commands
+
+Refer to `package.json` scripts and root `Makefile` for the full list. Summary of commonly used commands:
+
+| Task | Command |
+|---|---|
+| Install frontend deps | `yarn install --immutable` |
+| Start frontend (watch) | `yarn start` |
+| Build + run backend (watch) | `make run` |
+| Frontend lint | `yarn lint` (runs `lint:ts` + `lint:sass`) |
+| Frontend tests | `yarn jest --ci` |
+| Backend tests | `go test ./pkg/...` |
+| Typecheck | `yarn typecheck` |
+
+### Gotchas
+
+- **Decoupled plugins:** Several core datasource plugins (testdata, loki, tempo, jaeger, etc.) are NOT bundled in the main webpack build. If you need them in the browser, build them separately with `yarn plugin:build:dev` or target a specific one with `yarn workspace @grafana-plugins/<name> build`. Refer to `contribute/developer-guide.md` "Plugins" section for details.
+- **Node.js version:** Must match `.nvmrc` (currently v24.11.0). Use nvm: `nvm use` in the repo root.
+- **Corepack:** Must be enabled (`corepack enable`) for Yarn 4 to work.
+- **Default login:** `admin` / `admin` (skip password change prompt in dev).
+- **Go tools:** The `make run` target compiles Go tools (like `air`) on first use via `.citools/`. This can take a minute on first run.
+- **Pre-commit hooks:** Opt-in via `make lefthook-install`. Not required for cloud agents.
