@@ -940,6 +940,21 @@
     },
     {
       "metadata": {
+        "name": "browseDashboardsUseNavigate",
+        "resourceVersion": "1771436273719",
+        "creationTimestamp": "2026-02-18T17:37:53Z",
+        "deletionTimestamp": "2026-02-19T16:25:55Z"
+      },
+      "spec": {
+        "description": "Use React Router's useNavigate hook instead of locationService in browse dashboards pages",
+        "stage": "experimental",
+        "codeowner": "@grafana/dashboards-squad",
+        "frontend": true,
+        "expression": "false"
+      }
+    },
+    {
+      "metadata": {
         "name": "cachingOptimizeSerializationMemoryUsage",
         "resourceVersion": "1768498862515",
         "creationTimestamp": "2023-10-12T16:56:49Z",
@@ -3420,6 +3435,24 @@
         "description": "Alternative permission filter implementation that does not use subqueries for fetching the dashboard folder",
         "stage": "experimental",
         "codeowner": "@grafana/search-and-storage",
+        "expression": "false"
+      }
+    },
+    {
+      "metadata": {
+        "name": "playlistUseNavigate",
+        "resourceVersion": "1771396708252",
+        "creationTimestamp": "2026-02-18T01:50:22Z",
+        "deletionTimestamp": "2026-02-18T17:37:53Z",
+        "annotations": {
+          "grafana.app/updatedTimestamp": "2026-02-18 06:38:28.252922 +0000 UTC"
+        }
+      },
+      "spec": {
+        "description": "Use React Router's useNavigate hook instead of locationService in playlist pages",
+        "stage": "experimental",
+        "codeowner": "@grafana/dashboards-squad",
+        "frontend": true,
         "expression": "false"
       }
     },
