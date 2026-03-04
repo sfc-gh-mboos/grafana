@@ -23,6 +23,7 @@ type RouterWrapperProps = {
   pageBanners: ComponentType[];
   providers: Array<ComponentType<{ children: ReactNode }>>;
 };
+
 export function RouterWrapper(props: RouterWrapperProps) {
   return (
     <Router history={locationService.getHistory()}>
