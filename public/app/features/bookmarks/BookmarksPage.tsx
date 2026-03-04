@@ -66,11 +66,12 @@ export function BookmarksPage() {
       .map((tag) => ({ label: tag, value: tag }));
   }, [collator, validItems]);
 
-  const activeCategories = categoryFilters.map((option) => option.value).filter((value): value is string => Boolean(value));
-  const activeTags = tagFilters.map((option) => option.value).filter((value): value is string => Boolean(value));
   const searchTerm = searchValue.trim().toLowerCase();
 
   const filteredItems = useMemo(() => {
+    const activeCategories = categoryFilters.map((option) => option.value).filter((value): value is string => Boolean(value));
+    const activeTags = tagFilters.map((option) => option.value).filter((value): value is string => Boolean(value));
+
     return validItems.filter((bookmark) => {
       const categoryMatch = activeCategories.length === 0 || activeCategories.includes(bookmark.category);
       const tagsMatch = activeTags.length === 0 || activeTags.some((tag) => bookmark.tags.includes(tag));
@@ -94,7 +95,7 @@ export function BookmarksPage() {
         .toLowerCase();
       return searchableText.includes(searchTerm);
     });
-  }, [activeCategories, activeTags, searchTerm, validItems]);
+  }, [categoryFilters, tagFilters, searchTerm, validItems]);
 
   const groupedItems = useMemo(() => {
     const grouped = new Map<string, BookmarkedNavItem[]>();

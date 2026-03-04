@@ -112,20 +112,22 @@ func GetPreferencesFor(ctx context.Context,
 			}
 		}
 
-		if preference.JSONData.Navbar.BookmarkUrls != nil || preference.JSONData.Navbar.BookmarkItems != nil {
-			dto.Navbar = &preferences.PreferencesNavbarPreference{
-				BookmarkUrls: []string{},
-			}
+	if preference.JSONData.Navbar.BookmarkUrls != nil || preference.JSONData.Navbar.BookmarkItems != nil {
+		dto.Navbar = &preferences.PreferencesNavbarPreference{
+			BookmarkUrls: []string{},
+		}
+		if preference.JSONData.Navbar.BookmarkUrls != nil {
 			dto.Navbar.BookmarkUrls = preference.JSONData.Navbar.BookmarkUrls
-			dto.Navbar.BookmarkItems = make([]preferences.PreferencesBookmarkItemPreference, len(preference.JSONData.Navbar.BookmarkItems))
-			for i := range preference.JSONData.Navbar.BookmarkItems {
-				dto.Navbar.BookmarkItems[i] = preferences.PreferencesBookmarkItemPreference{
-					Url:      preference.JSONData.Navbar.BookmarkItems[i].URL,
-					Category: preference.JSONData.Navbar.BookmarkItems[i].Category,
-					Tags:     preference.JSONData.Navbar.BookmarkItems[i].Tags,
-				}
+		}
+		dto.Navbar.BookmarkItems = make([]preferences.PreferencesBookmarkItemPreference, len(preference.JSONData.Navbar.BookmarkItems))
+		for i := range preference.JSONData.Navbar.BookmarkItems {
+			dto.Navbar.BookmarkItems[i] = preferences.PreferencesBookmarkItemPreference{
+				Url:      preference.JSONData.Navbar.BookmarkItems[i].URL,
+				Category: preference.JSONData.Navbar.BookmarkItems[i].Category,
+				Tags:     preference.JSONData.Navbar.BookmarkItems[i].Tags,
 			}
 		}
+	}
 
 		if preference.JSONData.QueryHistory.HomeTab != "" {
 			dto.QueryHistory = &preferences.PreferencesQueryHistoryPreference{
