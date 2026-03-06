@@ -295,3 +295,37 @@ Use admonitions sparingly.
 Only include exceptional information in admonitions.
 
 <!-- docs-ai-end -->
+
+## Cursor Cloud specific instructions
+
+Grafana is a full-stack application with a Go backend and React/TypeScript frontend. For full development setup details, refer to `contribute/developer-guide.md`.
+
+### Services overview
+
+- **Backend (Go):** Serves the Grafana API and UI assets. Uses SQLite by default (no external DB needed). Start with `make run` (uses Air for hot reload). Runs on port `3000`.
+- **Frontend (TypeScript/React):** Built with Webpack. Start with `yarn start` for dev mode with watch + hot reload. The dev server proxies to the backend on port `3000`.
+
+### Running services
+
+Start the backend and frontend in separate terminals:
+
+1. `make run` — builds and runs the Go backend with Air hot-reloading.
+2. `yarn start` — builds frontend assets in watch mode with hot reload.
+
+Access Grafana at `http://localhost:3000`. Default credentials: `admin` / `admin`.
+
+### Key commands
+
+- **Frontend lint:** `yarn lint` (runs `eslint` and `stylelint`)
+- **Frontend tests:** `yarn test:ci` (non-interactive Jest)
+- **Backend tests:** `go test -short ./pkg/api/` (or any `./pkg/...` path)
+- **Build backend:** `make build-go`
+- **Typecheck:** `yarn typecheck`
+
+### Gotchas
+
+- The `.yarnrc.yml` has `enableScripts: false`. Native addon packages (esbuild, @swc/core) use WASM fallbacks instead. Don't change this setting.
+- Node.js v24 is required (see `.nvmrc`). Use `nvm use` before running yarn commands.
+- The backend build takes ~3-4 minutes on first compile. Air watches for Go file changes and auto-rebuilds.
+- If you see TypeScript errors after pulling, try `rm tsconfig.tsbuildinfo` and re-run `yarn start`.
+- Pre-commit hooks are opt-in via `make lefthook-install`. Not required for cloud agent operation.
