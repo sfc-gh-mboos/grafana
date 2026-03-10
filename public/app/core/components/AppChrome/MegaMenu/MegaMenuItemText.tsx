@@ -5,7 +5,12 @@ import { GrafanaTheme2 } from '@grafana/data';
 import { selectors } from '@grafana/e2e-selectors';
 import { t } from '@grafana/i18n';
 import { Icon, IconButton, Link, useTheme2 } from '@grafana/ui';
+import { createSuccessNotification } from 'app/core/copy/appNotification';
+import { notifyApp } from 'app/core/reducers/appNotification';
 import { contextSrv } from 'app/core/services/context_srv';
+import { isDashboardLink, toAbsoluteGrafanaUrl } from 'app/core/utils/dashboardLinks';
+import { copyStringToClipboard } from 'app/core/utils/explore';
+import { dispatch } from 'app/store/store';
 
 export interface Props {
   children: React.ReactNode;
@@ -22,6 +27,7 @@ export function MegaMenuItemText({ children, isActive, onClick, target, url, onP
 
   const styles = getStyles(theme, isActive);
   const LinkComponent = !target && url.startsWith('/') ? Link : 'a';
+  const showCopyDashboardLinkButton = contextSrv.isSignedIn && isDashboardLink(url);
 
   const linkContent = (
     <div className={styles.linkContent}>
@@ -46,6 +52,25 @@ export function MegaMenuItemText({ children, isActive, onClick, target, url, onP
       >
         {linkContent}
       </LinkComponent>
+      {showCopyDashboardLinkButton && (
+        <IconButton
+          name="copy"
+          className={'copy-link-icon'}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            copyStringToClipboard(toAbsoluteGrafanaUrl(url));
+            dispatch(
+              notifyApp(
+                createSuccessNotification(
+                  t('navigation.item.copy-dashboard-link.success', 'Dashboard link copied to clipboard')
+                )
+              )
+            );
+          }}
+          aria-label={t('navigation.item.copy-dashboard-link', 'Copy dashboard link')}
+        />
+      )}
       {contextSrv.isSignedIn && url && url !== '/bookmarks' && (
         <IconButton
           name="bookmark"
@@ -71,14 +96,14 @@ const getStyles = (theme: GrafanaTheme2, isActive: Props['isActive']) => ({
     justifyContent: 'space-between',
     width: '100%',
     height: '100%',
-    '.pin-icon': {
+    '.pin-icon, .copy-link-icon': {
       visibility: 'hidden',
     },
     '&:hover, &:focus-within': {
       a: {
-        width: 'calc(100% - 20px)',
+        width: 'calc(100% - 40px)',
       },
-      '.pin-icon': {
+      '.pin-icon, .copy-link-icon': {
         visibility: 'visible',
       },
     },
