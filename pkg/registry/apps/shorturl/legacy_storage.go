@@ -177,6 +177,10 @@ func (s *legacyStorage) Update(ctx context.Context,
 
 // GracefulDeleter
 func (s *legacyStorage) Delete(ctx context.Context, name string, deleteValidation rest.ValidateObjectFunc, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
+	requester, err := identity.GetRequester(ctx)
+	if err != nil {
+		return nil, false, err
+	}
 	v, err := s.Get(ctx, name, &metav1.GetOptions{})
 	if err != nil {
 		return v, false, err // includes the not-found error
@@ -185,7 +189,10 @@ func (s *legacyStorage) Delete(ctx context.Context, name string, deleteValidatio
 	if !ok {
 		return v, false, fmt.Errorf("expected a shorturl response from Get")
 	}
-	err = s.service.DeleteStaleShortURLs(ctx, &shorturls.DeleteShortUrlCommand{Uid: name})
+	err = s.service.DeleteStaleShortURLs(ctx, &shorturls.DeleteShortUrlCommand{
+		Uid:   name,
+		OrgId: requester.GetOrgID(),
+	})
 	return p, true, err // true is instant delete
 }
 
