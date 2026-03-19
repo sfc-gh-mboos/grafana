@@ -173,6 +173,7 @@ export const revokeShortLink = async (shortLinkUrl: string): Promise<void> => {
       await getBackendSrv().delete(`/api/short-urls/${uid}`);
     }
 
+    createShortLink.clear();
     dispatch(notifyApp(createSuccessNotification(t('dashboard.share.copy-link.revoked', 'Dashboard link revoked'))));
   } catch (error) {
     dispatch(

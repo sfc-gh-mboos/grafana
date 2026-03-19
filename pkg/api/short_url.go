@@ -122,7 +122,7 @@ func (hs *HTTPServer) deleteShortURL(c *contextmodel.ReqContext) response.Respon
 		return response.Err(shorturls.ErrShortURLBadRequest.Errorf("invalid uid"))
 	}
 
-	cmd := &shorturls.DeleteShortUrlCommand{Uid: shortURLUID}
+	cmd := &shorturls.DeleteShortUrlCommand{Uid: shortURLUID, OrgId: c.SignedInUser.GetOrgID()}
 	if err := hs.ShortURLService.DeleteStaleShortURLs(c.Req.Context(), cmd); err != nil {
 		return response.Err(shorturls.ErrShortURLInternal.Errorf("failed to delete shorturl: %w", err))
 	}

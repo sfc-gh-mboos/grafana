@@ -185,7 +185,11 @@ func (s *legacyStorage) Delete(ctx context.Context, name string, deleteValidatio
 	if !ok {
 		return v, false, fmt.Errorf("expected a shorturl response from Get")
 	}
-	err = s.service.DeleteStaleShortURLs(ctx, &shorturls.DeleteShortUrlCommand{Uid: name})
+	orgID, err := request.OrgIDForList(ctx)
+	if err != nil {
+		return v, false, err
+	}
+	err = s.service.DeleteStaleShortURLs(ctx, &shorturls.DeleteShortUrlCommand{Uid: name, OrgId: orgID})
 	return p, true, err // true is instant delete
 }
 
