@@ -80,10 +80,40 @@ func TestShortURLAPIEndpoint(t *testing.T) {
 				require.Equal(t, fmt.Sprintf("http://localhost:3000/goto/%s?orgId=%d", createResp.Uid, createResp.OrgId), shortUrl.URL)
 			})
 	})
+
+	t.Run("Given a correct request for deleting a shortUrl", func(t *testing.T) {
+		service := &fakeShortURLService{
+			deleteStaleShortURLsFunc: func(ctx context.Context, cmd *shorturls.DeleteShortUrlCommand) error {
+				require.Equal(t, "N1u6L4eGz", cmd.Uid)
+				cmd.NumDeleted = 1
+				return nil
+			},
+		}
+
+		deleteShortURLScenario(t, "/api/short-urls/N1u6L4eGz", "/api/short-urls/:uid", service,
+			func(sc *scenarioContext) {
+				callDeleteShortURL(sc, "N1u6L4eGz")
+				require.Equal(t, 200, sc.resp.Code)
+			})
+	})
+
+	t.Run("Given a delete request for an invalid uid", func(t *testing.T) {
+		service := &fakeShortURLService{}
+
+		deleteShortURLScenario(t, "/api/short-urls/not-valid-uid", "/api/short-urls/:uid", service,
+			func(sc *scenarioContext) {
+				callDeleteShortURL(sc, "not-valid-uid")
+				require.Equal(t, 400, sc.resp.Code)
+			})
+	})
 }
 
 func callCreateShortURL(sc *scenarioContext) {
 	sc.fakeReqWithParams("POST", sc.url, map[string]string{}).exec()
+}
+
+func callDeleteShortURL(sc *scenarioContext, uid string) {
+	sc.fakeReqWithParams("DELETE", sc.url, map[string]string{"uid": uid}).exec()
 }
 
 func createShortURLScenario(t *testing.T, desc string, url string, routePattern string, cmd dtos.CreateShortURLCmd, shortURLService shorturls.Service, fn scenarioFunc) {
@@ -110,9 +140,36 @@ func createShortURLScenario(t *testing.T, desc string, url string, routePattern 
 	})
 }
 
+func deleteShortURLScenario(
+	t *testing.T,
+	url string,
+	routePattern string,
+	shortURLService shorturls.Service,
+	fn scenarioFunc,
+) {
+	t.Run(fmt.Sprintf("When calling DELETE on %s", url), func(t *testing.T) {
+		hs := HTTPServer{
+			Cfg:             setting.NewCfg(),
+			ShortURLService: shortURLService,
+			log:             log.New("test"),
+		}
+
+		sc := setupScenarioContext(t, url)
+		sc.defaultHandler = routing.Wrap(func(c *contextmodel.ReqContext) response.Response {
+			sc.context = c
+			sc.context.SignedInUser = &user.SignedInUser{OrgID: testOrgID, UserID: testUserID}
+			return hs.deleteShortURL(c)
+		})
+
+		sc.m.Delete(routePattern, sc.defaultHandler)
+		fn(sc)
+	})
+}
+
 type fakeShortURLService struct {
 	createShortURLFunc         func(ctx context.Context, user identity.Requester, cmd *dtos.CreateShortURLCmd) (*shorturls.ShortUrl, error)
 	createConvertShortURLToDTO func(shortURL *shorturls.ShortUrl, appURL string) *dtos.ShortURL
+	deleteStaleShortURLsFunc   func(ctx context.Context, cmd *shorturls.DeleteShortUrlCommand) error
 }
 
 func (s *fakeShortURLService) List(ctx context.Context, orgID int64) ([]*shorturls.ShortUrl, error) {
@@ -136,6 +193,9 @@ func (s *fakeShortURLService) UpdateLastSeenAt(ctx context.Context, shortURL *sh
 }
 
 func (s *fakeShortURLService) DeleteStaleShortURLs(ctx context.Context, cmd *shorturls.DeleteShortUrlCommand) error {
+	if s.deleteStaleShortURLsFunc != nil {
+		return s.deleteStaleShortURLsFunc(ctx, cmd)
+	}
 	return nil
 }
 

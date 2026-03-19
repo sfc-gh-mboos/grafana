@@ -37,10 +37,12 @@ func (hs *HTTPServer) registerShortURLAPI(apiRoute routing.RouteRegister) {
 		handler := newShortURLK8sHandler(hs)
 		apiRoute.Post("/api/short-urls", reqSignedIn, handler.createKubernetesShortURLsHandler)
 		apiRoute.Get("/api/short-urls/:uid", reqSignedIn, handler.getKubernetesShortURLsHandler)
+		apiRoute.Delete("/api/short-urls/:uid", reqSignedIn, handler.deleteKubernetesShortURLHandler)
 		apiRoute.Get("/goto/:uid", reqSignedIn, handler.getKubernetesRedirectFromShortURL, hs.Index)
 	} else {
 		apiRoute.Post("/api/short-urls", reqSignedIn, hs.createShortURL)
 		apiRoute.Get("/api/short-urls/:uid", reqSignedIn, hs.getShortURL)
+		apiRoute.Delete("/api/short-urls/:uid", reqSignedIn, hs.deleteShortURL)
 		apiRoute.Get("/goto/:uid", reqSignedIn, hs.redirectFromShortURL, hs.Index)
 	}
 }
@@ -110,6 +112,26 @@ func (hs *HTTPServer) getShortURL(c *contextmodel.ReqContext) response.Response 
 	}
 
 	return response.JSON(http.StatusOK, shortURL)
+}
+
+// deleteShortURL handles requests to delete short URLs by UID.
+func (hs *HTTPServer) deleteShortURL(c *contextmodel.ReqContext) response.Response {
+	shortURLUID := web.Params(c.Req)[":uid"]
+
+	if !util.IsValidShortUID(shortURLUID) {
+		return response.Err(shorturls.ErrShortURLBadRequest.Errorf("invalid uid"))
+	}
+
+	cmd := &shorturls.DeleteShortUrlCommand{Uid: shortURLUID}
+	if err := hs.ShortURLService.DeleteStaleShortURLs(c.Req.Context(), cmd); err != nil {
+		return response.Err(shorturls.ErrShortURLInternal.Errorf("failed to delete shorturl: %w", err))
+	}
+
+	if cmd.NumDeleted == 0 {
+		return response.Err(shorturls.ErrShortURLNotFound.Errorf("shorturl not found"))
+	}
+
+	return response.JSON(http.StatusOK, map[string]string{"message": "short URL deleted"})
 }
 
 type shortURLK8sHandler struct {
@@ -236,6 +258,26 @@ func (sk8s *shortURLK8sHandler) createKubernetesShortURLsHandler(c *contextmodel
 
 	c.Logger.Info("Successfully created short URL", "path", cmd.Path, "uid", out.GetName())
 	c.JSON(http.StatusOK, shorturl.UnstructuredToLegacyShortURLDTO(*out, sk8s.cfg.AppURL))
+}
+
+func (sk8s *shortURLK8sHandler) deleteKubernetesShortURLHandler(c *contextmodel.ReqContext) {
+	client, ok := sk8s.getClient(c)
+	if !ok {
+		return
+	}
+
+	shortURLUID := web.Params(c.Req)[":uid"]
+	if !util.IsValidShortUID(shortURLUID) {
+		c.JsonApiErr(http.StatusBadRequest, "Invalid short URL UID format", fmt.Errorf("invalid short URL UID: %s", shortURLUID))
+		return
+	}
+
+	if err := client.Delete(c.Req.Context(), shortURLUID, v1.DeleteOptions{}); err != nil {
+		sk8s.writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, map[string]string{"message": "short URL deleted"})
 }
 
 //-----------------------------------------------------------------------------------------

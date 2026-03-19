@@ -4,11 +4,15 @@ import { useAsyncFn } from 'react-use';
 import { SelectableValue } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
 import { VizPanel } from '@grafana/scenes';
-import { Button, Field, Modal, RadioButtonGroup } from '@grafana/ui';
+import { Alert, Button, ClipboardButton, Field, Input, Modal, RadioButtonGroup } from '@grafana/ui';
 
 import { DashboardScene } from '../../scene/DashboardScene';
 
-import { buildShareUrlWithExpiration } from './utils';
+import {
+  buildShareUrlWithExpiration,
+  getLastCopiedDashboardShortLink,
+  revokeDashboardShareLink,
+} from './utils';
 
 export interface CopyDashboardLinkModalProps {
   dashboard: DashboardScene;
@@ -41,10 +45,54 @@ const getExpirationOptions = (): Array<SelectableValue<number>> => {
 
 export function CopyDashboardLinkModal({ dashboard, panel, onDismiss }: CopyDashboardLinkModalProps) {
   const [selectedTTL, setSelectedTTL] = useState<number>(DEFAULT_TTL_SECONDS);
+  const [copiedLink, setCopiedLink] = useState<string | undefined>(() => getLastCopiedDashboardShortLink());
   const [copyResult, copyLink] = useAsyncFn(async () => {
-    await buildShareUrlWithExpiration(dashboard, panel, selectedTTL);
-    onDismiss();
-  }, [dashboard, onDismiss, panel, selectedTTL]);
+    const copiedShortLink = await buildShareUrlWithExpiration(dashboard, panel, selectedTTL);
+    setCopiedLink(copiedShortLink);
+  }, [dashboard, panel, selectedTTL]);
+  const [revokeResult, revokeLink] = useAsyncFn(async () => {
+    if (!copiedLink) {
+      return;
+    }
+
+    await revokeDashboardShareLink(copiedLink);
+    setCopiedLink(undefined);
+  }, [copiedLink]);
+
+  const isActionLoading = copyResult.loading || revokeResult.loading;
+
+  const copyButtonLabel = copiedLink
+    ? t('dashboard.share.copy-link.action-generate-new', 'Generate and copy new link')
+    : t('dashboard.share.copy-link.action', 'Copy dashboard link');
+
+  const revokeButtonLabel = t('dashboard.share.copy-link.revoke-action', 'Revoke current link now');
+  const currentLinkLabel = t('dashboard.share.copy-link.current-link', 'Current copied link');
+
+  const revokeInfoText = t(
+    'dashboard.share.copy-link.revoke-info',
+    'Revoke this link to immediately invalidate access before the selected expiry.'
+  );
+
+  const revokeAlertTitle = t('dashboard.share.copy-link.revoke-alert-title', 'Link can be invalidated immediately');
+
+  const closeButtonLabel = t('dashboard.share.copy-link.close', 'Close');
+
+  const copiedLinkButtonLabel = t('dashboard.share.copy-link.copy-existing-link', 'Copy current link');
+
+  const copiedLinkDescription = t(
+    'dashboard.share.copy-link.current-link-description',
+    'Use this link while it is valid, or revoke it right away if access should stop now.'
+  );
+
+  const disableRevokeButton = !copiedLink || isActionLoading;
+
+  const onRevokeLink = () => {
+    revokeLink();
+  };
+
+  const getCopiedLink = () => {
+    return copiedLink ?? '';
+  };
 
   return (
     <Modal
@@ -61,13 +109,34 @@ export function CopyDashboardLinkModal({ dashboard, panel, onDismiss }: CopyDash
       <Field label={t('dashboard.share.copy-link.expiration', 'Token expiration')}>
         <RadioButtonGroup<number> options={getExpirationOptions()} value={selectedTTL} onChange={setSelectedTTL} />
       </Field>
+      {copiedLink && (
+        <>
+          <Field label={currentLinkLabel} description={copiedLinkDescription}>
+            <Input
+              value={copiedLink}
+              readOnly
+              addonAfter={
+                <ClipboardButton icon="copy" variant="primary" getText={getCopiedLink}>
+                  {copiedLinkButtonLabel}
+                </ClipboardButton>
+              }
+            />
+          </Field>
+          <Alert title={revokeAlertTitle} severity="warning" bottomSpacing={1}>
+            {revokeInfoText}
+          </Alert>
+        </>
+      )}
 
       <Modal.ButtonRow>
-        <Button variant="secondary" fill="outline" onClick={onDismiss}>
-          <Trans i18nKey="common.cancel">Cancel</Trans>
+        <Button variant="secondary" fill="outline" onClick={onDismiss} disabled={isActionLoading}>
+          {closeButtonLabel}
         </Button>
-        <Button onClick={copyLink} disabled={copyResult.loading}>
-          <Trans i18nKey="dashboard.share.copy-link.action">Copy dashboard link</Trans>
+        <Button variant="destructive" fill="outline" onClick={onRevokeLink} disabled={disableRevokeButton}>
+          {revokeButtonLabel}
+        </Button>
+        <Button onClick={copyLink} disabled={isActionLoading}>
+          {copyButtonLabel}
         </Button>
       </Modal.ButtonRow>
     </Modal>

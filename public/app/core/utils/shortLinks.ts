@@ -99,25 +99,30 @@ export const createShortLink = memoizeOne(async (path: string, expiresInSeconds?
  * @param path - The long path to share.
  * @returns A ClipboardItem for the shortened link.
  */
-const createShortLinkClipboardItem = (path: string, expiresInSeconds?: number) => {
+const createShortLinkClipboardItem = (shortLinkPromise: Promise<string>) => {
   return new ClipboardItem({
-    'text/plain': createShortLink(path, expiresInSeconds),
+    'text/plain': shortLinkPromise,
   });
 };
 
 export const createAndCopyShortLink = async (path: string, expiresInSeconds?: number) => {
   try {
     if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
-      await navigator.clipboard.write([createShortLinkClipboardItem(path, expiresInSeconds)]);
+      const shortLinkPromise = createShortLink(path, expiresInSeconds);
+      await navigator.clipboard.write([createShortLinkClipboardItem(shortLinkPromise)]);
+      const shortLink = await shortLinkPromise;
       dispatch(notifyApp(createSuccessNotification('Shortened link copied to clipboard')));
+      return shortLink;
     } else {
       const shortLink = await createShortLink(path, expiresInSeconds);
       copyStringToClipboard(shortLink);
       dispatch(notifyApp(createSuccessNotification('Shortened link copied to clipboard')));
+      return shortLink;
     }
   } catch (error) {
     // createShortLink already handles error notifications, just log
     console.error('Error in createAndCopyShortLink:', error);
+    return undefined;
   }
 };
 
@@ -132,6 +137,52 @@ export const createAndCopyShareDashboardLink = async (
   } else {
     copyStringToClipboard(shareUrl);
     dispatch(notifyApp(createSuccessNotification(t('link.share.copy-to-clipboard', 'Link copied to clipboard'))));
+    return shareUrl;
+  }
+};
+
+export const getShortLinkUID = (shortLinkUrl: string): string | undefined => {
+  try {
+    const parsedUrl = new URL(shortLinkUrl, buildHostUrl());
+    const match = parsedUrl.pathname.match(/\/goto\/([^/]+)\/?$/);
+    return match?.[1];
+  } catch {
+    return undefined;
+  }
+};
+
+export const revokeShortLink = async (shortLinkUrl: string): Promise<void> => {
+  const uid = getShortLinkUID(shortLinkUrl);
+  if (!uid) {
+    throw new Error('Invalid short link URL');
+  }
+
+  try {
+    if (config.featureToggles.useKubernetesShortURLsAPI) {
+      const result = await dispatch(
+        shortURLAPIv1beta1.endpoints.deleteShortUrl.initiate({
+          name: uid,
+        })
+      );
+
+      if ('error' in result) {
+        const errorMessage = extractErrorMessage(result.error);
+        throw new Error(errorMessage || 'Failed to revoke short URL');
+      }
+    } else {
+      await getBackendSrv().delete(`/api/short-urls/${uid}`);
+    }
+
+    dispatch(notifyApp(createSuccessNotification(t('dashboard.share.copy-link.revoked', 'Dashboard link revoked'))));
+  } catch (error) {
+    dispatch(
+      notifyApp(
+        createErrorNotification(
+          t('dashboard.share.copy-link.revoke-failed', 'Error revoking dashboard link')
+        )
+      )
+    );
+    throw error;
   }
 };
 
