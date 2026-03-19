@@ -106,12 +106,12 @@ export function CopyDashboardLinkModal({ dashboard, panel, onDismiss }: CopyDash
           Create a short dashboard link and choose when its share token expires.
         </Trans>
       </p>
-      <Field label={t('dashboard.share.copy-link.expiration', 'Token expiration')}>
+      <Field noMargin label={t('dashboard.share.copy-link.expiration', 'Token expiration')}>
         <RadioButtonGroup<number> options={getExpirationOptions()} value={selectedTTL} onChange={setSelectedTTL} />
       </Field>
       {copiedLink && (
         <>
-          <Field label={currentLinkLabel} description={copiedLinkDescription}>
+          <Field noMargin label={currentLinkLabel} description={copiedLinkDescription}>
             <Input
               value={copiedLink}
               readOnly

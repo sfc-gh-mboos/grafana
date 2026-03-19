@@ -97,13 +97,13 @@ func TestShortURLAPIEndpoint(t *testing.T) {
 			})
 	})
 
-	t.Run("Given a delete request for an invalid uid", func(t *testing.T) {
+	t.Run("Given a delete request for a non-existent uid", func(t *testing.T) {
 		service := &fakeShortURLService{}
 
 		deleteShortURLScenario(t, "/api/short-urls/not-valid-uid", "/api/short-urls/:uid", service,
 			func(sc *scenarioContext) {
 				callDeleteShortURL(sc, "not-valid-uid")
-				require.Equal(t, 400, sc.resp.Code)
+				require.Equal(t, 404, sc.resp.Code)
 			})
 	})
 }

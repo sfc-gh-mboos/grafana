@@ -19,6 +19,13 @@ import { copyStringToClipboard } from './explore';
 
 const SHORT_URL_TTL_SECONDS_ANNOTATION = 'shorturl.grafana.app/ttlSeconds';
 
+const clearCreateShortLinkCache = () => {
+  const clearFn = Reflect.get(createShortLink, 'clear');
+  if (typeof clearFn === 'function') {
+    clearFn();
+  }
+};
+
 function buildHostUrl() {
   return `${window.location.protocol}//${window.location.host}${config.appSubUrl}`;
 }
@@ -105,8 +112,16 @@ const createShortLinkClipboardItem = (shortLinkPromise: Promise<string>) => {
   });
 };
 
-export const createAndCopyShortLink = async (path: string, expiresInSeconds?: number) => {
+export const createAndCopyShortLink = async (
+  path: string,
+  expiresInSeconds?: number,
+  forceNewShortUrl = false
+) => {
   try {
+    if (forceNewShortUrl) {
+      clearCreateShortLinkCache();
+    }
+
     if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
       const shortLinkPromise = createShortLink(path, expiresInSeconds);
       await navigator.clipboard.write([createShortLinkClipboardItem(shortLinkPromise)]);
@@ -133,7 +148,7 @@ export const createAndCopyShareDashboardLink = async (
 ) => {
   const shareUrl = createDashboardShareUrl(dashboard, opts, panel);
   if (opts.useShortUrl) {
-    return await createAndCopyShortLink(shareUrl, opts.shortLinkExpiresInSeconds);
+    return await createAndCopyShortLink(shareUrl, opts.shortLinkExpiresInSeconds, opts.forceNewShortUrl);
   } else {
     copyStringToClipboard(shareUrl);
     dispatch(notifyApp(createSuccessNotification(t('link.share.copy-to-clipboard', 'Link copied to clipboard'))));
@@ -174,7 +189,27 @@ export const revokeShortLink = async (shortLinkUrl: string): Promise<void> => {
     }
 
     dispatch(notifyApp(createSuccessNotification(t('dashboard.share.copy-link.revoked', 'Dashboard link revoked'))));
+    clearCreateShortLinkCache();
   } catch (error) {
+    const errorMessage =
+      typeof error === 'string'
+        ? error
+        : error instanceof Error
+          ? error.message
+          : JSON.stringify(error ?? '');
+
+    if (errorMessage.toLowerCase().includes('notfound') || errorMessage.includes('404')) {
+      dispatch(
+        notifyApp(
+          createSuccessNotification(
+            t('dashboard.share.copy-link.already-revoked', 'Dashboard link is already invalid')
+          )
+        )
+      );
+      clearCreateShortLinkCache();
+      return;
+    }
+
     dispatch(
       notifyApp(
         createErrorNotification(

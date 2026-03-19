@@ -153,6 +153,13 @@ describe('revokeShortLink', () => {
   it('throws for invalid short link URL', async () => {
     await expect(revokeShortLink('invalid-link')).rejects.toThrow('Invalid short link URL');
   });
+
+  it('treats not found errors as already invalid link', async () => {
+    config.featureToggles.useKubernetesShortURLsAPI = false;
+    mockDelete.mockRejectedValueOnce(new Error('NotFound'));
+
+    await expect(revokeShortLink('https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1')).resolves.toBeUndefined();
+  });
 });
 
 describe('buildShortUrl', () => {

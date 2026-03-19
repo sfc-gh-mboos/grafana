@@ -11,6 +11,7 @@ export type ShareLinkConfiguration = {
   useShortUrl: boolean;
   theme: string;
   shortLinkExpiresInSeconds?: number;
+  forceNewShortUrl?: boolean;
 };
 
 const DEFAULT_SHARE_LINK_CONFIGURATION: ShareLinkConfiguration = {
@@ -44,6 +45,7 @@ export const buildShareUrlWithExpiration = async (
     theme,
     useShortUrl,
     shortLinkExpiresInSeconds,
+    forceNewShortUrl: true,
   });
 
   if (copiedLink && getShortLinkUID(copiedLink)) {
