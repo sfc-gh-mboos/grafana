@@ -22,6 +22,7 @@ import { useAppNotification } from 'app/core/copy/appNotification';
 import { useBusEvent } from 'app/core/hooks/useBusEvent';
 import { ID_PREFIX, setStarred } from 'app/core/reducers/navBarTree';
 import { removeNavIndex, updateNavIndex } from 'app/core/reducers/navModel';
+import { copyStringToClipboard } from 'app/core/utils/explore';
 import AddPanelButton from 'app/features/dashboard/components/AddPanelButton/AddPanelButton';
 import { SaveDashboardDrawer } from 'app/features/dashboard/components/SaveDashboard/SaveDashboardDrawer';
 import { getDashboardSrv } from 'app/features/dashboard/services/DashboardSrv';
@@ -155,6 +156,12 @@ export const DashNav = memo<Props>((props) => {
     });
   };
 
+  const onCopyLink = () => {
+    DashboardInteractions.toolbarCopyLinkClick();
+    copyStringToClipboard(window.location.href);
+    notifyApp.success(t('dashboard.toolbar.copy-link.success', 'Dashboard link copied to clipboard'));
+  };
+
   const onOpenSettings = () => {
     DashboardInteractions.toolbarSettingsClick();
     locationService.partial({ editview: 'settings' });
@@ -214,6 +221,18 @@ export const DashNav = memo<Props>((props) => {
 
     if (dashboard.uid) {
       buttons.push(<PublicDashboardBadgeLegacy key="public-dashboard-badge" uid={dashboard.uid} />);
+    }
+
+    if (dashboard.uid && !dashboard.meta.isSnapshot && !dashboard.meta.isEmbedded) {
+      buttons.push(
+        <DashNavButton
+          tooltip={t('dashboard.toolbar.copy-link.tooltip', 'Copy dashboard URL to clipboard')}
+          icon="copy"
+          iconSize="lg"
+          onClick={onCopyLink}
+          key="button-copy-link"
+        />
+      );
     }
 
     if (isDevEnv && config.featureToggles.dashboardScene) {

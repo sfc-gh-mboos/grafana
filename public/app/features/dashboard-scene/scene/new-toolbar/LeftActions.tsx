@@ -4,6 +4,7 @@ import { dynamicDashNavActions } from '../../utils/registerDynamicDashNavAction'
 import { DashboardScene } from '../DashboardScene';
 import { ManagedDashboardNavBarBadge } from '../ManagedDashboardNavBarBadge';
 
+import { CopyLinkButton } from './actions/CopyLinkButton';
 import { OpenSnapshotOriginButton } from './actions/OpenSnapshotOriginButton';
 import { PublicDashboardBadge } from './actions/PublicDashboardBadge';
 import { StarButton } from './actions/StarButton';
@@ -32,6 +33,12 @@ export const LeftActions = ({ dashboard }: { dashboard: DashboardScene }) => {
         component: StarButton,
         group: 'actions',
         condition: hasUid && canStar && isShowingDashboard && !isEditingDashboard,
+      },
+      {
+        key: 'copy-link-button',
+        component: CopyLinkButton,
+        group: 'actions',
+        condition: hasUid && isShowingDashboard && !isEditingDashboard && !isSnapshot && !isEmbedded,
       },
       {
         key: 'public-dashboard-badge',
