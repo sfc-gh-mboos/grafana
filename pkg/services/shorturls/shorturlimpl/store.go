@@ -63,9 +63,9 @@ func (s sqlStore) Delete(ctx context.Context, cmd *shorturls.DeleteShortUrlComma
 	// If a UID is provided, delete that specific short URL
 	if cmd.Uid != "" {
 		return s.db.WithTransactionalDbSession(ctx, func(session *db.Session) error {
-			var rawSql = "DELETE FROM short_url WHERE uid = ?"
+			var rawSql = "DELETE FROM short_url WHERE org_id = ? AND uid = ?"
 
-			if result, err := session.Exec(rawSql, cmd.Uid); err != nil {
+			if result, err := session.Exec(rawSql, cmd.OrgId, cmd.Uid); err != nil {
 				return err
 			} else if cmd.NumDeleted, err = result.RowsAffected(); err != nil {
 				return err

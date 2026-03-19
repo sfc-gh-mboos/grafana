@@ -28,6 +28,7 @@ type ShortUrl struct {
 
 type DeleteShortUrlCommand struct {
 	Uid       string
+	OrgId     int64
 	OlderThan time.Time
 
 	NumDeleted int64
