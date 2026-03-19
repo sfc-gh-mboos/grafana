@@ -5560,6 +5560,10 @@
       "add": "Add",
       "alert-rules": "Alert rules",
       "back-to-dashboard": "Back to dashboard",
+      "copy-link": {
+        "success": "Dashboard link copied to clipboard",
+        "tooltip": "Copy dashboard URL to clipboard"
+      },
       "dashboard-settings": {
         "label": "Settings",
         "tooltip": "Dashboard settings"
