@@ -215,6 +215,15 @@ export const DashboardInteractions = {
   revokePublicDashboardClicked: (properties?: Record<string, unknown>) => {
     reportSharingInteraction('sharing_public_revoke_clicked', properties);
   },
+  quickShareClicked: (properties?: Record<string, unknown>) => {
+    reportSharingInteraction('sharing_quick_share_clicked', properties);
+  },
+  quickShareLinkCopied: (properties?: Record<string, unknown>) => {
+    reportSharingInteraction('sharing_quick_share_link_copied', properties);
+  },
+  quickShareRevoked: (properties?: Record<string, unknown>) => {
+    reportSharingInteraction('sharing_quick_share_revoked', properties);
+  },
 
   // Empty dashboard state interactions:
   emptyDashboardButtonClicked: (properties?: Record<string, unknown>) => {
