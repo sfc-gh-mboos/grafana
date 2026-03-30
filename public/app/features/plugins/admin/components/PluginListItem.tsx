@@ -106,13 +106,15 @@ export const getStyles = (theme: GrafanaTheme2) => {
       borderRadius: theme.shape.radius.default,
       padding: theme.spacing(3),
       [theme.transitions.handleMotion('no-preference', 'reduce')]: {
-        transition: theme.transitions.create(['background-color', 'box-shadow', 'border-color', 'color'], {
+        transition: theme.transitions.create(['background-color', 'box-shadow', 'border-color', 'color', 'transform'], {
           duration: theme.transitions.duration.short,
         }),
       },
 
       '&:hover': {
         background: theme.colors.emphasize(theme.colors.background.secondary, 0.03),
+        transform: 'scale(1.02)',
+        boxShadow: theme.shadows.z2,
       },
     }),
     pluginType: css({
