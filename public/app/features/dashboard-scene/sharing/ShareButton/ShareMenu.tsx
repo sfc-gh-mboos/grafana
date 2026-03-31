@@ -6,6 +6,8 @@ import { t } from '@grafana/i18n';
 import { config, locationService } from '@grafana/runtime';
 import { VizPanel } from '@grafana/scenes';
 import { IconName, Menu, ModalsContext } from '@grafana/ui';
+import { useAppNotification } from 'app/core/copy/appNotification';
+import { copyStringToClipboard } from 'app/core/utils/explore';
 import { contextSrv } from 'app/core/services/context_srv';
 import { AccessControlAction } from 'app/types/accessControl';
 
@@ -42,10 +44,22 @@ export function resetDashboardShareDrawerItems() {
 
 export default function ShareMenu({ dashboard, panel }: { dashboard: DashboardScene; panel?: VizPanel }) {
   const { showModal, hideModal } = useContext(ModalsContext);
+  const notifyApp = useAppNotification();
 
   const onMenuItemClick = (shareView: string) => {
     locationService.partial({ shareView });
   };
+
+  const onCopyDashboardUID = useCallback(() => {
+    if (dashboard.state.uid) {
+      copyStringToClipboard(dashboard.state.uid);
+      notifyApp.success(t('share-dashboard.menu.copy-dashboard-uid-toast', 'Dashboard UID copied to clipboard'));
+      DashboardInteractions.sharingCategoryClicked({
+        item: 'copy_uid',
+        shareResource: getTrackingSource(panel?.getRef()),
+      });
+    }
+  }, [dashboard, notifyApp, panel]);
 
   const buildMenuItems = useCallback(() => {
     const menuItems: ShareDrawerMenuItem[] = [];
@@ -135,6 +149,17 @@ export default function ShareMenu({ dashboard, panel }: { dashboard: DashboardSc
           />
         </React.Fragment>
       ))}
+      {dashboard.state.uid && (
+        <>
+          <Menu.Divider />
+          <Menu.Item
+            testId={newShareButtonSelector.copyDashboardUID}
+            label={t('share-dashboard.menu.copy-dashboard-uid-title', 'Copy dashboard UID')}
+            icon="copy"
+            onClick={onCopyDashboardUID}
+          />
+        </>
+      )}
     </Menu>
   );
 }

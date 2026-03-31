@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { selectors as e2eSelectors } from '@grafana/e2e-selectors';
 import { config } from '@grafana/runtime';
@@ -16,6 +17,23 @@ const createAndCopyDashboardShortLinkMock = jest.fn();
 jest.mock('app/core/utils/shortLinks', () => ({
   ...jest.requireActual('app/core/utils/shortLinks'),
   createAndCopyDashboardShortLink: () => createAndCopyDashboardShortLinkMock(),
+}));
+
+const copyStringToClipboardMock = jest.fn();
+jest.mock('app/core/utils/explore', () => ({
+  ...jest.requireActual('app/core/utils/explore'),
+  copyStringToClipboard: (...args: unknown[]) => copyStringToClipboardMock(...args),
+}));
+
+const mockNotifyAppSuccess = jest.fn();
+jest.mock('app/core/copy/appNotification', () => ({
+  ...jest.requireActual('app/core/copy/appNotification'),
+  useAppNotification: () => ({
+    success: mockNotifyAppSuccess,
+    warning: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+  }),
 }));
 
 const selector = e2eSelectors.pages.Dashboard.DashNav.newShareButton.menu;
@@ -48,6 +66,30 @@ describe('ShareMenu', () => {
     setup();
 
     expect(screen.queryByTestId(selector.shareExternally)).not.toBeInTheDocument();
+  });
+
+  describe('CopyDashboardUID', () => {
+    it('should render copy dashboard UID option when dashboard has a UID', async () => {
+      setup({ uid: 'my-dashboard-uid' });
+
+      expect(await screen.findByTestId(selector.copyDashboardUID)).toBeInTheDocument();
+    });
+
+    it('should not render copy dashboard UID option when dashboard has no UID', async () => {
+      setup({ uid: undefined });
+
+      expect(screen.queryByTestId(selector.copyDashboardUID)).not.toBeInTheDocument();
+    });
+
+    it('should copy UID to clipboard and show toast on click', async () => {
+      setup({ uid: 'my-dashboard-uid' });
+
+      const menuItem = await screen.findByTestId(selector.copyDashboardUID);
+      await userEvent.click(menuItem);
+
+      expect(copyStringToClipboardMock).toHaveBeenCalledWith('my-dashboard-uid');
+      expect(mockNotifyAppSuccess).toHaveBeenCalledWith('Dashboard UID copied to clipboard');
+    });
   });
 
   describe('ShareSnapshot', () => {

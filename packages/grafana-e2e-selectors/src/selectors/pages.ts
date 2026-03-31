@@ -233,6 +233,9 @@ export const versionedPages = {
           shareSnapshot: {
             '11.2.0': 'data-testid new share button share snapshot',
           },
+          copyDashboardUID: {
+            '12.5.0': 'data-testid new share button copy dashboard uid',
+          },
         },
       },
       NewExportButton: {
