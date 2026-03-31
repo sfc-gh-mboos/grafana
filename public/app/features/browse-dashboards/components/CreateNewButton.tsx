@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom-v5-compat';
+import { useLocation, useNavigate } from 'react-router-dom-v5-compat';
 
 import { locationUtil } from '@grafana/data';
-import { config, getDataSourceSrv, locationService, reportInteraction } from '@grafana/runtime';
+import { config, getDataSourceSrv, reportInteraction } from '@grafana/runtime';
 import { Button, Drawer, Dropdown, Icon, Menu, MenuItem } from '@grafana/ui';
 import { OwnerReference } from 'app/api/clients/folder/v1beta1';
 import { useCreateFolder } from 'app/api/clients/folder/v1beta1/hooks';
@@ -46,6 +46,7 @@ export default function CreateNewButton({
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const [newFolder] = useCreateFolder();
   const [showNewFolderDrawer, setShowNewFolderDrawer] = useState(false);
   const notifyApp = useAppNotification();
@@ -87,7 +88,7 @@ export default function CreateNewButton({
       }
 
       if (folder.data) {
-        locationService.push(locationUtil.stripBaseFromUrl(folder.data.url));
+        navigate(locationUtil.stripBaseFromUrl(folder.data.url));
       }
     } finally {
       setShowNewFolderDrawer(false);
