@@ -20,6 +20,7 @@ import { DashboardInteractions } from '../../utils/interactions';
 import { SaveBeforeShareModal } from '../SaveBeforeShareModal';
 
 const newShareButtonSelector = e2eSelectors.pages.Dashboard.DashNav.newShareButton.menu;
+const copyDashboardUidShareId = 'copy_dashboard_uid';
 
 export interface ShareDrawerMenuItem {
   shareId: string;
@@ -89,20 +90,23 @@ export default function ShareMenu({ dashboard, panel }: { dashboard: DashboardSc
     });
 
     menuItems.push({
-      shareId: shareDashboardType.copyDashboardUid,
+      shareId: copyDashboardUidShareId,
       testId: newShareButtonSelector.copyDashboardUid,
       icon: 'copy',
       label: t('share-dashboard.menu.copy-dashboard-uid-title', 'Copy dashboard UID'),
       renderCondition: Boolean(dashboard.state.uid),
       onClick: () => {
-        if (!dashboard.state.uid) {
+        const { uid } = dashboard.state;
+        if (!uid) {
           return;
         }
 
-        copyStringToClipboard(dashboard.state.uid);
+        copyStringToClipboard(uid);
         dispatch(
           notifyApp(
-            createSuccessNotification(t('share-dashboard.menu.dashboard-uid-copied', 'Dashboard UID copied to clipboard'))
+            createSuccessNotification(
+              t('share-dashboard.menu.copy-dashboard-uid-success', 'Dashboard UID copied to clipboard')
+            )
           )
         );
       },
@@ -111,7 +115,7 @@ export default function ShareMenu({ dashboard, panel }: { dashboard: DashboardSc
     customShareDrawerItems.forEach((d) => menuItems.push(d));
 
     return menuItems.filter((item) => item.renderCondition);
-  }, [dashboard, panel]);
+  }, [dashboard.state.uid, panel]);
 
   const onClick = useCallback(
     (item: ShareDrawerMenuItem) => {
@@ -124,11 +128,7 @@ export default function ShareMenu({ dashboard, panel }: { dashboard: DashboardSc
         item.onClick(dashboard);
       };
 
-      if (
-        item.shareId !== shareDashboardType.copyDashboardUid &&
-        dashboard.state.isEditing &&
-        dashboard.state.isDirty
-      ) {
+      if (item.shareId !== copyDashboardUidShareId && dashboard.state.isEditing && dashboard.state.isDirty) {
         showModal(SaveBeforeShareModal, { dashboard, onContinue: continueAction, onDismiss: hideModal });
         return;
       }

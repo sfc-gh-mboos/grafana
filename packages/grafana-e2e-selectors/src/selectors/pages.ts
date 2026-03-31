@@ -234,7 +234,7 @@ export const versionedPages = {
             '11.2.0': 'data-testid new share button share snapshot',
           },
           copyDashboardUid: {
-            [MIN_GRAFANA_VERSION]: 'data-testid new share button copy dashboard uid',
+            '12.5.0': 'data-testid new share button copy dashboard uid',
           },
         },
       },

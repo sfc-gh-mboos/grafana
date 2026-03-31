@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { selectors as e2eSelectors } from '@grafana/e2e-selectors';
 import { config } from '@grafana/runtime';
 import { SceneTimeRange, VizPanel } from '@grafana/scenes';
+import { ModalsContext } from '@grafana/ui';
 import { contextSrv } from 'app/core/services/context_srv';
 import { AccessControlAction } from 'app/types/accessControl';
 
@@ -13,21 +14,19 @@ import { DefaultGridLayoutManager } from '../../scene/layout-default/DefaultGrid
 import ShareMenu from './ShareMenu';
 
 const createAndCopyDashboardShortLinkMock = jest.fn();
+const copyStringToClipboardMock = jest.fn();
+const dispatchMock = jest.fn();
 jest.mock('app/core/utils/shortLinks', () => ({
   ...jest.requireActual('app/core/utils/shortLinks'),
   createAndCopyDashboardShortLink: () => createAndCopyDashboardShortLinkMock(),
 }));
-
-const copyStringToClipboardMock = jest.fn();
 jest.mock('app/core/utils/explore', () => ({
   ...jest.requireActual('app/core/utils/explore'),
-  copyStringToClipboard: (...args: unknown[]) => copyStringToClipboardMock(...args),
+  copyStringToClipboard: (value: string) => copyStringToClipboardMock(value),
 }));
-
-const dispatchMock = jest.fn();
 jest.mock('app/store/store', () => ({
   ...jest.requireActual('app/store/store'),
-  dispatch: (...args: unknown[]) => dispatchMock(...args),
+  dispatch: (value: unknown) => dispatchMock(value),
 }));
 
 const selector = e2eSelectors.pages.Dashboard.DashNav.newShareButton.menu;
@@ -93,26 +92,27 @@ describe('ShareMenu', () => {
     });
   });
 
-  it('should copy dashboard uid when copy dashboard uid is clicked', async () => {
-    setup({ uid: 'dash-uid-123' });
+  it('copies dashboard uid and bypasses save modal in dirty edit mode', async () => {
+    const showModal = jest.fn();
+    setup(
+      { isEditing: true, isDirty: true, uid: 'copy-me-123' },
+      {
+        showModal,
+      }
+    );
 
     fireEvent.click(await screen.findByTestId(selector.copyDashboardUid));
 
-    expect(copyStringToClipboardMock).toHaveBeenCalledWith('dash-uid-123');
+    expect(copyStringToClipboardMock).toHaveBeenCalledWith('copy-me-123');
     expect(dispatchMock).toHaveBeenCalled();
-  });
-
-  it('should copy dashboard uid without save modal in edit mode with unsaved changes', async () => {
-    setup({ uid: 'dash-uid-456', isEditing: true, isDirty: true });
-
-    fireEvent.click(await screen.findByTestId(selector.copyDashboardUid));
-
-    expect(copyStringToClipboardMock).toHaveBeenCalledWith('dash-uid-456');
-    expect(dispatchMock).toHaveBeenCalled();
+    expect(showModal).not.toHaveBeenCalled();
   });
 });
 
-function setup(overrides?: Partial<DashboardSceneState>) {
+function setup(
+  overrides?: Partial<DashboardSceneState>,
+  modalContextOverrides?: Partial<{ showModal: (...args: unknown[]) => void; hideModal: () => void }>
+) {
   const panel = new VizPanel({
     title: 'Panel A',
     pluginId: 'table',
@@ -127,5 +127,15 @@ function setup(overrides?: Partial<DashboardSceneState>) {
     ...overrides,
   });
 
-  render(<ShareMenu dashboard={dashboard} />);
+  render(
+    <ModalsContext.Provider
+      value={{
+        showModal: jest.fn(),
+        hideModal: jest.fn(),
+        ...modalContextOverrides,
+      }}
+    >
+      <ShareMenu dashboard={dashboard} />
+    </ModalsContext.Provider>
+  );
 }
