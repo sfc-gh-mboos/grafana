@@ -1,5 +1,4 @@
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { selectors as e2eSelectors } from '@grafana/e2e-selectors';
 import { config } from '@grafana/runtime';
@@ -25,15 +24,10 @@ jest.mock('app/core/utils/explore', () => ({
   copyStringToClipboard: (...args: unknown[]) => copyStringToClipboardMock(...args),
 }));
 
-const mockNotifyAppSuccess = jest.fn();
-jest.mock('app/core/copy/appNotification', () => ({
-  ...jest.requireActual('app/core/copy/appNotification'),
-  useAppNotification: () => ({
-    success: mockNotifyAppSuccess,
-    warning: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
-  }),
+const dispatchMock = jest.fn();
+jest.mock('app/store/store', () => ({
+  ...jest.requireActual('app/store/store'),
+  dispatch: (...args: unknown[]) => dispatchMock(...args),
 }));
 
 const selector = e2eSelectors.pages.Dashboard.DashNav.newShareButton.menu;
@@ -59,6 +53,7 @@ describe('ShareMenu', () => {
     expect(await screen.findByTestId(selector.shareInternally)).toBeInTheDocument();
     expect(await screen.findByTestId(selector.shareExternally)).toBeInTheDocument();
     expect(await screen.findByTestId(selector.shareSnapshot)).toBeInTheDocument();
+    expect(await screen.findByTestId(selector.copyDashboardUid)).toBeInTheDocument();
   });
 
   it('should not share externally when public dashboard is disabled', async () => {
@@ -66,30 +61,6 @@ describe('ShareMenu', () => {
     setup();
 
     expect(screen.queryByTestId(selector.shareExternally)).not.toBeInTheDocument();
-  });
-
-  describe('CopyDashboardUID', () => {
-    it('should render copy dashboard UID option when dashboard has a UID', async () => {
-      setup({ uid: 'my-dashboard-uid' });
-
-      expect(await screen.findByTestId(selector.copyDashboardUID)).toBeInTheDocument();
-    });
-
-    it('should not render copy dashboard UID option when dashboard has no UID', async () => {
-      setup({ uid: undefined });
-
-      expect(screen.queryByTestId(selector.copyDashboardUID)).not.toBeInTheDocument();
-    });
-
-    it('should copy UID to clipboard and show toast on click', async () => {
-      setup({ uid: 'my-dashboard-uid' });
-
-      const menuItem = await screen.findByTestId(selector.copyDashboardUID);
-      await userEvent.click(menuItem);
-
-      expect(copyStringToClipboardMock).toHaveBeenCalledWith('my-dashboard-uid');
-      expect(mockNotifyAppSuccess).toHaveBeenCalledWith('Dashboard UID copied to clipboard');
-    });
   });
 
   describe('ShareSnapshot', () => {
@@ -120,6 +91,24 @@ describe('ShareMenu', () => {
 
       expect(screen.queryByTestId(selector.shareSnapshot)).not.toBeInTheDocument();
     });
+  });
+
+  it('should copy dashboard uid when copy dashboard uid is clicked', async () => {
+    setup({ uid: 'dash-uid-123' });
+
+    fireEvent.click(await screen.findByTestId(selector.copyDashboardUid));
+
+    expect(copyStringToClipboardMock).toHaveBeenCalledWith('dash-uid-123');
+    expect(dispatchMock).toHaveBeenCalled();
+  });
+
+  it('should copy dashboard uid without save modal in edit mode with unsaved changes', async () => {
+    setup({ uid: 'dash-uid-456', isEditing: true, isDirty: true });
+
+    fireEvent.click(await screen.findByTestId(selector.copyDashboardUid));
+
+    expect(copyStringToClipboardMock).toHaveBeenCalledWith('dash-uid-456');
+    expect(dispatchMock).toHaveBeenCalled();
   });
 });
 

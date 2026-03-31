@@ -6,9 +6,11 @@ import { t } from '@grafana/i18n';
 import { config, locationService } from '@grafana/runtime';
 import { VizPanel } from '@grafana/scenes';
 import { IconName, Menu, ModalsContext } from '@grafana/ui';
-import { useAppNotification } from 'app/core/copy/appNotification';
-import { copyStringToClipboard } from 'app/core/utils/explore';
+import { createSuccessNotification } from 'app/core/copy/appNotification';
+import { notifyApp } from 'app/core/reducers/appNotification';
 import { contextSrv } from 'app/core/services/context_srv';
+import { copyStringToClipboard } from 'app/core/utils/explore';
+import { dispatch } from 'app/store/store';
 import { AccessControlAction } from 'app/types/accessControl';
 
 import { isPublicDashboardsEnabled } from '../../../dashboard/components/ShareModal/SharePublicDashboard/SharePublicDashboardUtils';
@@ -44,22 +46,10 @@ export function resetDashboardShareDrawerItems() {
 
 export default function ShareMenu({ dashboard, panel }: { dashboard: DashboardScene; panel?: VizPanel }) {
   const { showModal, hideModal } = useContext(ModalsContext);
-  const notifyApp = useAppNotification();
 
   const onMenuItemClick = (shareView: string) => {
     locationService.partial({ shareView });
   };
-
-  const onCopyDashboardUID = useCallback(() => {
-    if (dashboard.state.uid) {
-      copyStringToClipboard(dashboard.state.uid);
-      notifyApp.success(t('share-dashboard.menu.copy-dashboard-uid-toast', 'Dashboard UID copied to clipboard'));
-      DashboardInteractions.sharingCategoryClicked({
-        item: 'copy_uid',
-        shareResource: getTrackingSource(panel?.getRef()),
-      });
-    }
-  }, [dashboard, notifyApp, panel]);
 
   const buildMenuItems = useCallback(() => {
     const menuItems: ShareDrawerMenuItem[] = [];
@@ -98,10 +88,30 @@ export default function ShareMenu({ dashboard, panel }: { dashboard: DashboardSc
       },
     });
 
+    menuItems.push({
+      shareId: shareDashboardType.copyDashboardUid,
+      testId: newShareButtonSelector.copyDashboardUid,
+      icon: 'copy',
+      label: t('share-dashboard.menu.copy-dashboard-uid-title', 'Copy dashboard UID'),
+      renderCondition: Boolean(dashboard.state.uid),
+      onClick: () => {
+        if (!dashboard.state.uid) {
+          return;
+        }
+
+        copyStringToClipboard(dashboard.state.uid);
+        dispatch(
+          notifyApp(
+            createSuccessNotification(t('share-dashboard.menu.dashboard-uid-copied', 'Dashboard UID copied to clipboard'))
+          )
+        );
+      },
+    });
+
     customShareDrawerItems.forEach((d) => menuItems.push(d));
 
     return menuItems.filter((item) => item.renderCondition);
-  }, [panel]);
+  }, [dashboard, panel]);
 
   const onClick = useCallback(
     (item: ShareDrawerMenuItem) => {
@@ -114,7 +124,11 @@ export default function ShareMenu({ dashboard, panel }: { dashboard: DashboardSc
         item.onClick(dashboard);
       };
 
-      if (dashboard.state.isEditing && dashboard.state.isDirty) {
+      if (
+        item.shareId !== shareDashboardType.copyDashboardUid &&
+        dashboard.state.isEditing &&
+        dashboard.state.isDirty
+      ) {
         showModal(SaveBeforeShareModal, { dashboard, onContinue: continueAction, onDismiss: hideModal });
         return;
       }
@@ -149,17 +163,6 @@ export default function ShareMenu({ dashboard, panel }: { dashboard: DashboardSc
           />
         </React.Fragment>
       ))}
-      {dashboard.state.uid && (
-        <>
-          <Menu.Divider />
-          <Menu.Item
-            testId={newShareButtonSelector.copyDashboardUID}
-            label={t('share-dashboard.menu.copy-dashboard-uid-title', 'Copy dashboard UID')}
-            icon="copy"
-            onClick={onCopyDashboardUID}
-          />
-        </>
-      )}
     </Menu>
   );
 }
