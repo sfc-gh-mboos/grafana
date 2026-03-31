@@ -295,3 +295,32 @@ Use admonitions sparingly.
 Only include exceptional information in admonitions.
 
 <!-- docs-ai-end -->
+
+## Cursor Cloud specific instructions
+
+This is the Grafana open-source observability platform (Go backend + React/TypeScript frontend).
+
+### Services
+
+- **Go backend:** Serves the API and frontend on port 3000. Uses embedded SQLite by default (no external DB needed). Start with `make run` (uses `air` for hot reload).
+- **Frontend dev server:** Webpack watch mode compiling TypeScript/React assets. Start with `yarn start` (or `make run-frontend`). Both services must run simultaneously for a working dev environment.
+- **Default login:** `admin` / `admin`.
+
+### Running commands
+
+- **Lint (frontend):** `yarn lint` (runs ESLint + stylelint). For SASS only: `yarn lint:sass`.
+- **Tests (frontend):** `yarn jest --ci` or use sharding: `yarn jest --ci --shard=1/10`. Refer to `package.json` scripts for all test commands.
+- **Tests (backend):** `go test -v ./pkg/...` for unit tests, or `go test -tags=integration ./pkg/...` for integration tests (SQLite).
+- **Build (backend):** `go run build.go build` compiles binaries to `bin/linux-amd64/`.
+- **Build (frontend):** `yarn build` for production build.
+
+### Gotchas
+
+- Node.js v24.x is required (see `.nvmrc`). The VM snapshot uses nvm; run `nvm use` if the shell doesn't auto-select the right version.
+- Yarn 4.11.0 is managed via corepack. Run `corepack enable && corepack install` before `yarn install --immutable`.
+- The `.yarnrc.yml` sets `enableScripts: false`, so postinstall scripts don't run. This is intentional.
+- The backend build takes ~4 minutes on first run due to CGo/SQLite compilation. Subsequent `make run` rebuilds are fast via `air` hot reload.
+- If `yarn start` fails with `ENOSPC`, increase inotify watchers: `echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p`.
+- If `make run` fails with "too many open files", increase: `ulimit -S -n 65536`.
+- Optional data sources (Prometheus, Loki, etc.) require Docker and are started via `make devenv sources=<name>`. These aren't needed for core development.
+- Pre-commit hooks are opt-in via `make lefthook-install`. Not required for cloud agent operation.
