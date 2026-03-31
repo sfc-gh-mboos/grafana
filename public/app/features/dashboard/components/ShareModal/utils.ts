@@ -201,5 +201,4 @@ export const shareDashboardType: {
   publicDashboard: 'public_dashboard',
   inviteUser: 'invite_user',
   image: 'image',
-  copyDashboardUid: 'copy_dashboard_uid',
 };

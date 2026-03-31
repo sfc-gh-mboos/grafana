@@ -1,9 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 import { selectors as e2eSelectors } from '@grafana/e2e-selectors';
 import { config } from '@grafana/runtime';
 import { SceneTimeRange, VizPanel } from '@grafana/scenes';
-import { ModalsContext } from '@grafana/ui';
 import { contextSrv } from 'app/core/services/context_srv';
 import { AccessControlAction } from 'app/types/accessControl';
 
@@ -14,19 +13,9 @@ import { DefaultGridLayoutManager } from '../../scene/layout-default/DefaultGrid
 import ShareMenu from './ShareMenu';
 
 const createAndCopyDashboardShortLinkMock = jest.fn();
-const copyStringToClipboardMock = jest.fn();
-const dispatchMock = jest.fn();
 jest.mock('app/core/utils/shortLinks', () => ({
   ...jest.requireActual('app/core/utils/shortLinks'),
   createAndCopyDashboardShortLink: () => createAndCopyDashboardShortLinkMock(),
-}));
-jest.mock('app/core/utils/explore', () => ({
-  ...jest.requireActual('app/core/utils/explore'),
-  copyStringToClipboard: (value: string) => copyStringToClipboardMock(value),
-}));
-jest.mock('app/store/store', () => ({
-  ...jest.requireActual('app/store/store'),
-  dispatch: (value: unknown) => dispatchMock(value),
 }));
 
 const selector = e2eSelectors.pages.Dashboard.DashNav.newShareButton.menu;
@@ -52,7 +41,6 @@ describe('ShareMenu', () => {
     expect(await screen.findByTestId(selector.shareInternally)).toBeInTheDocument();
     expect(await screen.findByTestId(selector.shareExternally)).toBeInTheDocument();
     expect(await screen.findByTestId(selector.shareSnapshot)).toBeInTheDocument();
-    expect(await screen.findByTestId(selector.copyDashboardUid)).toBeInTheDocument();
   });
 
   it('should not share externally when public dashboard is disabled', async () => {
@@ -91,28 +79,9 @@ describe('ShareMenu', () => {
       expect(screen.queryByTestId(selector.shareSnapshot)).not.toBeInTheDocument();
     });
   });
-
-  it('copies dashboard uid and bypasses save modal in dirty edit mode', async () => {
-    const showModal = jest.fn();
-    setup(
-      { isEditing: true, isDirty: true, uid: 'copy-me-123' },
-      {
-        showModal,
-      }
-    );
-
-    fireEvent.click(await screen.findByTestId(selector.copyDashboardUid));
-
-    expect(copyStringToClipboardMock).toHaveBeenCalledWith('copy-me-123');
-    expect(dispatchMock).toHaveBeenCalled();
-    expect(showModal).not.toHaveBeenCalled();
-  });
 });
 
-function setup(
-  overrides?: Partial<DashboardSceneState>,
-  modalContextOverrides?: Partial<{ showModal: (...args: unknown[]) => void; hideModal: () => void }>
-) {
+function setup(overrides?: Partial<DashboardSceneState>) {
   const panel = new VizPanel({
     title: 'Panel A',
     pluginId: 'table',
@@ -127,15 +96,5 @@ function setup(
     ...overrides,
   });
 
-  render(
-    <ModalsContext.Provider
-      value={{
-        showModal: jest.fn(),
-        hideModal: jest.fn(),
-        ...modalContextOverrides,
-      }}
-    >
-      <ShareMenu dashboard={dashboard} />
-    </ModalsContext.Provider>
-  );
+  render(<ShareMenu dashboard={dashboard} />);
 }

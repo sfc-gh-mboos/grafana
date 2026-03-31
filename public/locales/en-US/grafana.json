@@ -13040,8 +13040,6 @@
   },
   "share-dashboard": {
     "menu": {
-      "copy-dashboard-uid-title": "Copy dashboard UID",
-      "dashboard-uid-copied": "Dashboard UID copied to clipboard",
       "export-image-title": "Export as image",
       "export-json-title": "Export as JSON",
       "share-externally-title": "Share externally",
