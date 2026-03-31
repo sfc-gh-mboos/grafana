@@ -413,7 +413,8 @@ func (srv *CleanUpService) deleteStaleKubernetesShortURLs(ctx context.Context) {
 	gvr := v1beta1.ShortURLKind().GroupVersionResource()
 
 	// Calculate the expiration time
-	expirationTime := time.Now().Add(-time.Duration(srv.Cfg.ShortLinkExpiration*24) * time.Hour)
+	now := time.Now()
+	expirationTime := now.Add(-time.Duration(srv.Cfg.ShortLinkExpiration*24) * time.Hour)
 	expirationTimestamp := expirationTime.Unix()
 	deletedCount := 0
 
@@ -442,8 +443,10 @@ func (srv *CleanUpService) deleteStaleKubernetesShortURLs(ctx context.Context) {
 				continue
 			}
 
-			// Only delete if lastSeenAt is 0 (meaning it has not been accessed) and the creation time is older than the expiration time
-			if shortURL.Status.LastSeenAt == 0 && shortURL.CreationTimestamp.Unix() < expirationTimestamp {
+			// Delete links that are explicitly expired, or stale links that were never accessed.
+			explicitlyExpired := v1beta1.IsExpired(shortURL.Annotations, shortURL.CreationTimestamp.Time, now)
+			staleAndUnaccessed := shortURL.Status.LastSeenAt == 0 && shortURL.CreationTimestamp.Unix() < expirationTimestamp
+			if explicitlyExpired || staleAndUnaccessed {
 				namespace := shortURL.Namespace
 				name := shortURL.Name
 
@@ -457,7 +460,7 @@ func (srv *CleanUpService) deleteStaleKubernetesShortURLs(ctx context.Context) {
 					}
 				} else {
 					deletedCount++
-					logger.Debug("Successfully deleted expired shortURL", "name", name, "namespace", namespace, "creationTime", shortURL.CreationTimestamp.Unix(), "expirationTime", expirationTimestamp)
+					logger.Debug("Successfully deleted expired shortURL", "name", name, "namespace", namespace, "creationTime", shortURL.CreationTimestamp.Unix(), "expirationTime", expirationTimestamp, "explicitlyExpired", explicitlyExpired)
 				}
 			}
 		}

@@ -6,15 +6,24 @@ import { ShortURL } from '../../../../apps/shorturl/plugin/src/generated/shortur
 import { defaultSpec } from '../../../../apps/shorturl/plugin/src/generated/shorturl/v1beta1/types.spec.gen';
 import { defaultStatus } from '../../../../apps/shorturl/plugin/src/generated/shorturl/v1beta1/types.status.gen';
 
-import { createShortLink, createAndCopyShortLink, getLogsPermalinkRange, buildShortUrl } from './shortLinks';
+import {
+  createShortLink,
+  createAndCopyShortLink,
+  getLogsPermalinkRange,
+  buildShortUrl,
+  getShortLinkUID,
+  revokeShortLink,
+} from './shortLinks';
+
+const mockPost = jest.fn();
+const mockDelete = jest.fn();
 
 jest.mock('@grafana/runtime', () => ({
   ...jest.requireActual('@grafana/runtime'),
   getBackendSrv: () => {
     return {
-      post: () => {
-        return Promise.resolve({ url: 'https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1' });
-      },
+      post: mockPost,
+      delete: mockDelete,
     };
   },
 }));
@@ -34,6 +43,8 @@ jest.mock('app/store/store', () => ({
 }));
 
 beforeEach(() => {
+  mockPost.mockResolvedValue({ url: 'https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1' });
+  mockDelete.mockResolvedValue({});
   Object.assign(navigator, {
     clipboard: {
       write: jest.fn().mockResolvedValue(undefined),
@@ -57,6 +68,15 @@ describe('createShortLink', () => {
   it('creates short link', async () => {
     const shortUrl = await createShortLink('d/edhmipji89b0gb/welcome?orgId=1&from=now-6h&to=now&timezone=browser');
     expect(shortUrl).toBe('https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1');
+  });
+
+  it('sends expiresInSeconds when expiration is provided', async () => {
+    await createShortLink('d/edhmipji89b0gb/welcome?orgId=1', 3600);
+
+    expect(mockPost).toHaveBeenCalledWith('/api/short-urls', {
+      path: 'd/edhmipji89b0gb/welcome?orgId=1',
+      expiresInSeconds: 3600,
+    });
   });
 });
 
@@ -108,6 +128,37 @@ describe('createAndCopyShortLink', () => {
     })) as any;
     await createAndCopyShortLink('d/edhmipji89b0gb/welcome?orgId=1&from=now-6h&to=now&timezone=browser');
     expect(navigator.clipboard.write).toHaveBeenCalled();
+  });
+});
+
+describe('getShortLinkUID', () => {
+  it('extracts the short link UID from a valid URL', () => {
+    expect(getShortLinkUID('https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1')).toBe('bewyw48durgu8d');
+  });
+
+  it('returns undefined for invalid short link URLs', () => {
+    expect(getShortLinkUID('https://www.test.grafana.com/d/abc123/dashboard')).toBeUndefined();
+  });
+});
+
+describe('revokeShortLink', () => {
+  it('deletes short link through the legacy API when kubernetes short URL API is disabled', async () => {
+    config.featureToggles.useKubernetesShortURLsAPI = false;
+
+    await revokeShortLink('https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1');
+
+    expect(mockDelete).toHaveBeenCalledWith('/api/short-urls/bewyw48durgu8d');
+  });
+
+  it('throws for invalid short link URL', async () => {
+    await expect(revokeShortLink('invalid-link')).rejects.toThrow('Invalid short link URL');
+  });
+
+  it('treats not found errors as already invalid link', async () => {
+    config.featureToggles.useKubernetesShortURLsAPI = false;
+    mockDelete.mockRejectedValueOnce(new Error('NotFound'));
+
+    await expect(revokeShortLink('https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1')).resolves.toBeUndefined();
   });
 });
 

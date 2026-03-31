@@ -124,6 +124,50 @@ func TestIntegrationShortURLService(t *testing.T) {
 		newShortURL, err = service.CreateShortURL(ctx, user, cmd3)
 		require.ErrorIs(t, err, shorturls.ErrShortURLInvalidPath)
 		require.Nil(t, newShortURL)
+
+		cmd4 := &dtos.CreateShortURLCmd{
+			Path:             "path/test?test=true",
+			ExpiresInSeconds: -1,
+		}
+		newShortURL, err = service.CreateShortURL(ctx, user, cmd4)
+		require.ErrorIs(t, err, shorturls.ErrShortURLBadRequest)
+		require.Nil(t, newShortURL)
+	})
+
+	t.Run("User can create short URLs that expire", func(t *testing.T) {
+		service := ShortURLService{SQLStore: &sqlStore{db: store}}
+
+		origGetTime := getTime
+		t.Cleanup(func() {
+			getTime = origGetTime
+		})
+
+		now := time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
+		getTime = func() time.Time {
+			return now
+		}
+
+		cmd := &dtos.CreateShortURLCmd{
+			Path:             "expiring/path?test=true",
+			ExpiresInSeconds: 3600,
+		}
+
+		newShortURL, err := service.CreateShortURL(context.Background(), user, cmd)
+		require.NoError(t, err)
+		require.NotNil(t, newShortURL)
+		require.Equal(t, now.Unix()+3600, newShortURL.ExpiresAt)
+
+		existingShortURL, err := service.GetShortURLByUID(context.Background(), user, newShortURL.Uid)
+		require.NoError(t, err)
+		require.NotNil(t, existingShortURL)
+
+		getTime = func() time.Time {
+			return now.Add(2 * time.Hour)
+		}
+
+		expiredShortURL, err := service.GetShortURLByUID(context.Background(), user, newShortURL.Uid)
+		require.ErrorIs(t, err, shorturls.ErrShortURLNotFound)
+		require.Nil(t, expiredShortURL)
 	})
 
 	t.Run("The same URL will generate different entries", func(t *testing.T) {

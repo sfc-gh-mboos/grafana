@@ -207,6 +207,9 @@ export const versionedPages = {
       shareButton: {
         '10.4.0': 'data-testid share-button',
       },
+      copyLinkButton: {
+        '12.1.0': 'data-testid copy-link-button',
+      },
       scrollContainer: {
         '11.1.0': 'data-testid Dashboard canvas scroll container',
       },

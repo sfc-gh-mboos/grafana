@@ -23,10 +23,12 @@ type ShortUrl struct {
 	CreatedBy  int64  `json:"-"`
 	CreatedAt  int64  `json:"-"`
 	LastSeenAt int64  `json:"lastSeenAt"`
+	ExpiresAt  int64  `json:"expiresAt,omitempty"`
 }
 
 type DeleteShortUrlCommand struct {
 	Uid       string
+	OrgId     int64
 	OlderThan time.Time
 
 	NumDeleted int64

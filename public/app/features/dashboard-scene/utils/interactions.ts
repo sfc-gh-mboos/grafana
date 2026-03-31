@@ -144,6 +144,9 @@ export const DashboardInteractions = {
   toolbarShareClick: () => {
     reportDashboardInteraction('toolbar_actions_clicked', { item: 'share' });
   },
+  toolbarCopyLinkClick: () => {
+    reportDashboardInteraction('toolbar_actions_clicked', { item: 'copy_link' });
+  },
   toolbarShareDropdownClick: () => {
     reportDashboardInteraction('toolbar_actions_clicked', { item: 'share_dropdown' });
   },

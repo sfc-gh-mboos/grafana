@@ -28,4 +28,11 @@ func addShortURLMigrations(mg *Migrator) {
 	mg.AddMigration("alter table short_url alter column created_by type to bigint", NewRawSQLMigration("").
 		Mysql("ALTER TABLE short_url MODIFY created_by BIGINT;").
 		Postgres("ALTER TABLE short_url ALTER COLUMN created_by TYPE BIGINT;"))
+
+	mg.AddMigration("add expires_at column to short_url", NewAddColumnMigration(shortURLV1, &Column{
+		Name:     "expires_at",
+		Type:     DB_Int,
+		Nullable: false,
+		Default:  "0",
+	}))
 }

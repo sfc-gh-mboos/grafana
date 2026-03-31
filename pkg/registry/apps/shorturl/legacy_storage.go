@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -119,6 +121,18 @@ func (s *legacyStorage) Create(ctx context.Context,
 		Path: p.Spec.Path,
 		UID:  p.Name,
 	}
+	annotations := p.GetAnnotations()
+	if ttlStr, ok := annotations[shorturl.TTLSecondsAnnotation]; ok {
+		if ttlSeconds, err := strconv.ParseInt(ttlStr, 10, 64); err == nil && ttlSeconds > 0 {
+			cmd.ExpiresInSeconds = ttlSeconds
+		}
+	} else if expiresAt, ok := shorturl.GetExpirationTimestamp(annotations, p.CreationTimestamp.Time); ok {
+		secondsUntilExpiry := expiresAt - time.Now().Unix()
+		if secondsUntilExpiry <= 0 {
+			secondsUntilExpiry = 1
+		}
+		cmd.ExpiresInSeconds = secondsUntilExpiry
+	}
 	out, err := s.service.CreateShortURL(ctx, requester, cmd)
 	if err != nil {
 		return nil, err
@@ -163,6 +177,10 @@ func (s *legacyStorage) Update(ctx context.Context,
 
 // GracefulDeleter
 func (s *legacyStorage) Delete(ctx context.Context, name string, deleteValidation rest.ValidateObjectFunc, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
+	requester, err := identity.GetRequester(ctx)
+	if err != nil {
+		return nil, false, err
+	}
 	v, err := s.Get(ctx, name, &metav1.GetOptions{})
 	if err != nil {
 		return v, false, err // includes the not-found error
@@ -171,7 +189,10 @@ func (s *legacyStorage) Delete(ctx context.Context, name string, deleteValidatio
 	if !ok {
 		return v, false, fmt.Errorf("expected a shorturl response from Get")
 	}
-	err = s.service.DeleteStaleShortURLs(ctx, &shorturls.DeleteShortUrlCommand{Uid: name})
+	err = s.service.DeleteStaleShortURLs(ctx, &shorturls.DeleteShortUrlCommand{
+		Uid:   name,
+		OrgId: requester.GetOrgID(),
+	})
 	return p, true, err // true is instant delete
 }
 

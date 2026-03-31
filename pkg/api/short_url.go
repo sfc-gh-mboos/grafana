@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,10 +37,12 @@ func (hs *HTTPServer) registerShortURLAPI(apiRoute routing.RouteRegister) {
 		handler := newShortURLK8sHandler(hs)
 		apiRoute.Post("/api/short-urls", reqSignedIn, handler.createKubernetesShortURLsHandler)
 		apiRoute.Get("/api/short-urls/:uid", reqSignedIn, handler.getKubernetesShortURLsHandler)
+		apiRoute.Delete("/api/short-urls/:uid", reqSignedIn, handler.deleteKubernetesShortURLHandler)
 		apiRoute.Get("/goto/:uid", reqSignedIn, handler.getKubernetesRedirectFromShortURL, hs.Index)
 	} else {
 		apiRoute.Post("/api/short-urls", reqSignedIn, hs.createShortURL)
 		apiRoute.Get("/api/short-urls/:uid", reqSignedIn, hs.getShortURL)
+		apiRoute.Delete("/api/short-urls/:uid", reqSignedIn, hs.deleteShortURL)
 		apiRoute.Get("/goto/:uid", reqSignedIn, hs.redirectFromShortURL, hs.Index)
 	}
 }
@@ -111,6 +114,29 @@ func (hs *HTTPServer) getShortURL(c *contextmodel.ReqContext) response.Response 
 	return response.JSON(http.StatusOK, shortURL)
 }
 
+// deleteShortURL handles requests to delete short URLs by UID.
+func (hs *HTTPServer) deleteShortURL(c *contextmodel.ReqContext) response.Response {
+	shortURLUID := web.Params(c.Req)[":uid"]
+
+	if !util.IsValidShortUID(shortURLUID) {
+		return response.Err(shorturls.ErrShortURLBadRequest.Errorf("invalid uid"))
+	}
+
+	cmd := &shorturls.DeleteShortUrlCommand{
+		Uid:   shortURLUID,
+		OrgId: c.SignedInUser.GetOrgID(),
+	}
+	if err := hs.ShortURLService.DeleteStaleShortURLs(c.Req.Context(), cmd); err != nil {
+		return response.Err(shorturls.ErrShortURLInternal.Errorf("failed to delete shorturl: %w", err))
+	}
+
+	if cmd.NumDeleted == 0 {
+		return response.Err(shorturls.ErrShortURLNotFound.Errorf("shorturl not found"))
+	}
+
+	return response.JSON(http.StatusOK, map[string]string{"message": "short URL deleted"})
+}
+
 type shortURLK8sHandler struct {
 	namespacer           request.NamespaceMapper
 	gvr                  schema.GroupVersionResource
@@ -145,6 +171,10 @@ func (sk8s *shortURLK8sHandler) getKubernetesShortURLsHandler(c *contextmodel.Re
 		sk8s.writeError(c, err)
 		return
 	}
+	if v1beta1.IsExpired(out.GetAnnotations(), out.GetCreationTimestamp().Time, time.Now()) {
+		c.JsonApiErr(http.StatusNotFound, "shorturl not found", fmt.Errorf("short URL expired"))
+		return
+	}
 
 	c.JSON(http.StatusOK, shorturl.UnstructuredToLegacyShortURL(*out))
 }
@@ -173,7 +203,15 @@ func (sk8s *shortURLK8sHandler) getKubernetesRedirectFromShortURL(c *contextmode
 		Do(c.Req.Context())
 
 	if err = result.Error(); err != nil {
-		c.JsonApiErr(500, "goto", err)
+		// Missing or expired short URLs should behave like legacy: redirect to the app root.
+		if errors.IsNotFound(err) {
+			c.Logger.Debug("Not redirecting short URL since not found", "uid", uid)
+			c.Redirect(sk8s.cfg.AppURL, http.StatusPermanentRedirect)
+			return
+		}
+
+		c.Logger.Error("Short URL redirection error", "uid", uid, "error", err)
+		c.Redirect(sk8s.cfg.AppURL, http.StatusTemporaryRedirect)
 		return
 	}
 
@@ -223,6 +261,26 @@ func (sk8s *shortURLK8sHandler) createKubernetesShortURLsHandler(c *contextmodel
 
 	c.Logger.Info("Successfully created short URL", "path", cmd.Path, "uid", out.GetName())
 	c.JSON(http.StatusOK, shorturl.UnstructuredToLegacyShortURLDTO(*out, sk8s.cfg.AppURL))
+}
+
+func (sk8s *shortURLK8sHandler) deleteKubernetesShortURLHandler(c *contextmodel.ReqContext) {
+	client, ok := sk8s.getClient(c)
+	if !ok {
+		return
+	}
+
+	shortURLUID := web.Params(c.Req)[":uid"]
+	if !util.IsValidShortUID(shortURLUID) {
+		c.JsonApiErr(http.StatusBadRequest, "Invalid short URL UID format", fmt.Errorf("invalid short URL UID: %s", shortURLUID))
+		return
+	}
+
+	if err := client.Delete(c.Req.Context(), shortURLUID, v1.DeleteOptions{}); err != nil {
+		sk8s.writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, map[string]string{"message": "short URL deleted"})
 }
 
 //-----------------------------------------------------------------------------------------
