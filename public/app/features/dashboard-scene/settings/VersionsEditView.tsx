@@ -1,8 +1,9 @@
 import * as React from 'react';
 
 import { PageLayoutType, dateTimeFormat, dateTimeFormatTimeAgo } from '@grafana/data';
+import { t, Trans } from '@grafana/i18n';
 import { SceneComponentProps, SceneObjectBase, sceneGraph } from '@grafana/scenes';
-import { Spinner, Stack } from '@grafana/ui';
+import { Alert, Button, Spinner, Stack } from '@grafana/ui';
 import { Page } from 'app/core/components/Page/Page';
 
 import { DashboardScene } from '../scene/DashboardScene';
@@ -32,6 +33,8 @@ export interface VersionsEditViewState extends DashboardEditViewState {
   newInfo?: DecoratedRevisionModel;
   baseInfo?: DecoratedRevisionModel;
   isNewLatest?: boolean;
+  versionsError?: Error;
+  diffError?: Error;
 }
 
 export class VersionsEditView extends SceneObjectBase<VersionsEditViewState> implements DashboardEditView {
@@ -102,7 +105,7 @@ export class VersionsEditView extends SceneObjectBase<VersionsEditViewState> imp
       return;
     }
 
-    this.setState({ isAppending: append });
+    this.setState({ isAppending: append, versionsError: undefined });
 
     const requestOptions = this._continueToken
       ? { limit: this._limit, start: this._start, continueToken: this._continueToken }
@@ -114,12 +117,18 @@ export class VersionsEditView extends SceneObjectBase<VersionsEditViewState> imp
         this.setState({
           isLoading: false,
           versions: [...(append ? (this.state.versions ?? []) : []), ...this.decorateVersions(result.versions)],
+          versionsError: undefined,
         });
         this._start += this._limit;
         // Update the continueToken for the next request, if available
         this._continueToken = result.continueToken ?? '';
       })
-      .catch((err) => console.log(err))
+      .catch((err) => {
+        this.setState({
+          isLoading: false,
+          versionsError: err instanceof Error ? err : new Error('Failed to load version history'),
+        });
+      })
       .finally(() => this.setState({ isAppending: false }));
   };
 
@@ -130,26 +139,36 @@ export class VersionsEditView extends SceneObjectBase<VersionsEditViewState> imp
 
     this.setState({
       isLoading: true,
+      diffError: undefined,
     });
 
     if (!this._dashboard.state.uid) {
       return;
     }
-    // the id here is the resource version in k8s, use this instead to get the specific version
-    let lhs = await historySrv.getDashboardVersion(this._dashboard.state.uid, baseInfo.id);
-    let rhs = await historySrv.getDashboardVersion(this._dashboard.state.uid, newInfo.id);
 
-    this.setState({
-      baseInfo,
-      isLoading: false,
-      isNewLatest,
-      newInfo,
-      viewMode: 'compare',
-      diffData: {
-        lhs: lhs.data,
-        rhs: rhs.data,
-      },
-    });
+    try {
+      // the id here is the resource version in k8s, use this instead to get the specific version
+      let lhs = await historySrv.getDashboardVersion(this._dashboard.state.uid, baseInfo.id);
+      let rhs = await historySrv.getDashboardVersion(this._dashboard.state.uid, newInfo.id);
+
+      this.setState({
+        baseInfo,
+        isLoading: false,
+        isNewLatest,
+        newInfo,
+        viewMode: 'compare',
+        diffData: {
+          lhs: lhs.data,
+          rhs: rhs.data,
+        },
+        diffError: undefined,
+      });
+    } catch (err) {
+      this.setState({
+        isLoading: false,
+        diffError: err instanceof Error ? err : new Error('Failed to load version comparison'),
+      });
+    }
   };
 
   public reset = () => {
@@ -191,7 +210,8 @@ export class VersionsEditView extends SceneObjectBase<VersionsEditViewState> imp
 
 function VersionsEditorSettingsListView({ model }: SceneComponentProps<VersionsEditView>) {
   const dashboard = model.getDashboard();
-  const { isLoading, isAppending, viewMode, baseInfo, newInfo, isNewLatest } = model.useState();
+  const { isLoading, isAppending, viewMode, baseInfo, newInfo, isNewLatest, versionsError, diffError } =
+    model.useState();
   const { navModel, pageNav } = useDashboardEditPageNav(dashboard, model.getUrlKey());
   const canCompare = model.versions.filter((version) => version.checked).length === 2;
   const showButtons = model.versions.length > 1;
@@ -210,7 +230,21 @@ function VersionsEditorSettingsListView({ model }: SceneComponentProps<VersionsE
         newVersion={newInfo?.version}
         isNewLatest={isNewLatest}
       />
-      {isLoading ? (
+      {diffError ? (
+        <Stack direction="column" alignItems="center" gap={2}>
+          <Alert
+            title={t('dashboard.versions.diff-error-title', 'Failed to load version comparison')}
+            severity="error"
+          >
+            <Trans i18nKey="dashboard.versions.diff-error-description">
+              An error occurred while loading the version comparison. Please try again.
+            </Trans>
+          </Alert>
+          <Button variant="secondary" onClick={() => model.getDiff()}>
+            <Trans i18nKey="dashboard.versions.retry">Retry</Trans>
+          </Button>
+        </Stack>
+      ) : isLoading ? (
         <VersionsHistorySpinner msg="Fetching changes&hellip;" />
       ) : (
         <VersionHistoryComparison
@@ -226,7 +260,21 @@ function VersionsEditorSettingsListView({ model }: SceneComponentProps<VersionsE
 
   const viewModeList = (
     <>
-      {isLoading ? (
+      {versionsError ? (
+        <Stack direction="column" alignItems="center" gap={2}>
+          <Alert
+            title={t('dashboard.versions.list-error-title', 'Failed to load version history')}
+            severity="error"
+          >
+            <Trans i18nKey="dashboard.versions.list-error-description">
+              An error occurred while loading the version history. Please try again.
+            </Trans>
+          </Alert>
+          <Button variant="secondary" onClick={() => model.fetchVersions(false)}>
+            <Trans i18nKey="dashboard.versions.retry">Retry</Trans>
+          </Button>
+        </Stack>
+      ) : isLoading ? (
         <VersionsHistorySpinner msg="Fetching history list&hellip;" />
       ) : (
         <VersionHistoryTable
@@ -237,7 +285,7 @@ function VersionsEditorSettingsListView({ model }: SceneComponentProps<VersionsE
         />
       )}
       {isAppending && <VersionsHistorySpinner msg="Fetching more entries&hellip;" />}
-      {showButtons && (
+      {showButtons && !versionsError && (
         <VersionsHistoryButtons
           hasMore={hasMore}
           canCompare={canCompare}

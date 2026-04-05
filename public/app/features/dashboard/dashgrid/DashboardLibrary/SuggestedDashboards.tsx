@@ -1,12 +1,12 @@
 import { css } from '@emotion/css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom-v5-compat';
-import { useAsync, useAsyncFn } from 'react-use';
+import { useAsyncFn, useAsyncRetry } from 'react-use';
 
 import { GrafanaTheme2 } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
 import { getDataSourceSrv, locationService } from '@grafana/runtime';
-import { Button, useStyles2, Grid, Alert } from '@grafana/ui';
+import { Alert, Button, Grid, Stack, useStyles2 } from '@grafana/ui';
 import { PluginDashboard } from 'app/types/plugins';
 
 import { DashboardCard } from './DashboardCard';
@@ -72,7 +72,12 @@ export const SuggestedDashboards = ({ datasourceUid }: Props) => {
     return ds?.type || '';
   }, [datasourceUid]);
 
-  const { value: result, loading } = useAsync(async (): Promise<SuggestedDashboardsResult> => {
+  const {
+    value: result,
+    loading,
+    error: loadError,
+    retry,
+  } = useAsyncRetry(async (): Promise<SuggestedDashboardsResult> => {
     if (!datasourceUid) {
       return { dashboards: [], hasMoreDashboards: false };
     }
@@ -82,63 +87,58 @@ export const SuggestedDashboards = ({ datasourceUid }: Props) => {
       return { dashboards: [], hasMoreDashboards: false };
     }
 
-    try {
-      // Fetch both provisioned and community dashboards in parallel
-      const [provisioned, communityResponse] = await Promise.all([
-        // Fetch provisioned dashboards
-        fetchProvisionedDashboards(ds.type),
+    // Fetch both provisioned and community dashboards in parallel
+    const [provisioned, communityResponse] = await Promise.all([
+      // Fetch provisioned dashboards
+      fetchProvisionedDashboards(ds.type),
 
-        // Fetch community dashboards
-        fetchCommunityDashboards({
-          orderBy: DEFAULT_SORT_ORDER,
-          direction: DEFAULT_SORT_DIRECTION,
-          page: 1,
-          pageSize: COMMUNITY_PAGE_SIZE_QUERY,
-          includeScreenshots: INCLUDE_SCREENSHOTS,
-          dataSourceSlugIn: ds.type,
-          includeLogo: INCLUDE_LOGO,
-        }),
-      ]);
+      // Fetch community dashboards
+      fetchCommunityDashboards({
+        orderBy: DEFAULT_SORT_ORDER,
+        direction: DEFAULT_SORT_DIRECTION,
+        page: 1,
+        pageSize: COMMUNITY_PAGE_SIZE_QUERY,
+        includeScreenshots: INCLUDE_SCREENSHOTS,
+        dataSourceSlugIn: ds.type,
+        includeLogo: INCLUDE_LOGO,
+      }),
+    ]);
 
-      const community = communityResponse.items.slice(0, COMMUNITY_RESULT_SIZE);
+    const community = communityResponse.items.slice(0, COMMUNITY_RESULT_SIZE);
 
-      // Mix: 1 provisioned + 2 community
-      const mixed: MixedDashboard[] = [];
+    // Mix: 1 provisioned + 2 community
+    const mixed: MixedDashboard[] = [];
 
-      // Take 1 provisioned if available
-      if (provisioned.length > 0) {
-        mixed.push({ type: 'provisioned', dashboard: provisioned[0], index: 0 });
-      }
-
-      // Take up to 2 community dashboards
-      const communityCount = Math.min(2, community.length);
-      for (let i = 0; i < communityCount; i++) {
-        mixed.push({ type: 'community', dashboard: community[i] });
-      }
-
-      // Fill remaining slots if we have less than 3
-      while (mixed.length < 3) {
-        const provisionedUsed = mixed.filter((m) => m.type === 'provisioned').length;
-        const communityUsed = mixed.filter((m) => m.type === 'community').length;
-
-        if (provisionedUsed < provisioned.length) {
-          mixed.push({ type: 'provisioned', dashboard: provisioned[provisionedUsed], index: provisionedUsed });
-        } else if (communityUsed < community.length) {
-          mixed.push({ type: 'community', dashboard: community[communityUsed] });
-        } else {
-          break; // Not enough dashboards
-        }
-      }
-
-      // Determine if there are more dashboards available beyond what we're showing
-      // Show "View all" if: more than 1 provisioned exists OR we got the full page size of community dashboards
-      const hasMoreDashboards = provisioned.length > 1 || community.length > MAX_SUGGESTED_DASHBOARDS_PREVIEW;
-
-      return { dashboards: mixed, hasMoreDashboards };
-    } catch (error) {
-      console.error('Error loading suggested dashboards', error);
-      return { dashboards: [], hasMoreDashboards: false };
+    // Take 1 provisioned if available
+    if (provisioned.length > 0) {
+      mixed.push({ type: 'provisioned', dashboard: provisioned[0], index: 0 });
     }
+
+    // Take up to 2 community dashboards
+    const communityCount = Math.min(2, community.length);
+    for (let i = 0; i < communityCount; i++) {
+      mixed.push({ type: 'community', dashboard: community[i] });
+    }
+
+    // Fill remaining slots if we have less than 3
+    while (mixed.length < 3) {
+      const provisionedUsed = mixed.filter((m) => m.type === 'provisioned').length;
+      const communityUsed = mixed.filter((m) => m.type === 'community').length;
+
+      if (provisionedUsed < provisioned.length) {
+        mixed.push({ type: 'provisioned', dashboard: provisioned[provisionedUsed], index: provisionedUsed });
+      } else if (communityUsed < community.length) {
+        mixed.push({ type: 'community', dashboard: community[communityUsed] });
+      } else {
+        break; // Not enough dashboards
+      }
+    }
+
+    // Determine if there are more dashboards available beyond what we're showing
+    // Show "View all" if: more than 1 provisioned exists OR we got the full page size of community dashboards
+    const hasMoreDashboards = provisioned.length > 1 || community.length > MAX_SUGGESTED_DASHBOARDS_PREVIEW;
+
+    return { dashboards: mixed, hasMoreDashboards };
   }, [datasourceUid]);
 
   // Determine which tab should be default based on available data
@@ -268,8 +268,8 @@ export const SuggestedDashboards = ({ datasourceUid }: Props) => {
     [datasourceUid, onShowMapping]
   );
 
-  // Don't render if no dashboards or still loading
-  if (!loading && (!result || result.dashboards.length === 0)) {
+  // Don't render if no dashboards (but still show if error so user can retry)
+  if (!loading && !loadError && (!result || result.dashboards.length === 0)) {
     return null;
   }
 
@@ -302,6 +302,21 @@ export const SuggestedDashboards = ({ datasourceUid }: Props) => {
             </Button>
           )}
         </div>
+        {loadError && (
+          <Stack direction="column" alignItems="center" gap={2}>
+            <Alert
+              title={t('dashboard-library.suggested-error-title', 'Failed to load suggested dashboards')}
+              severity="error"
+            >
+              <Trans i18nKey="dashboard-library.suggested-error-description">
+                An error occurred while loading suggested dashboards. Please try again.
+              </Trans>
+            </Alert>
+            <Button variant="secondary" onClick={retry}>
+              <Trans i18nKey="dashboard-library.retry">Retry</Trans>
+            </Button>
+          </Stack>
+        )}
         {isPreviewCommunityDashboardError && (
           <div>
             <Alert
@@ -312,51 +327,53 @@ export const SuggestedDashboards = ({ datasourceUid }: Props) => {
             </Alert>
           </div>
         )}
-        <Grid
-          gap={4}
-          columns={{
-            xs: 1,
-            sm: 2,
-            lg: 3,
-          }}
-        >
-          {loading
-            ? Array.from({ length: 3 }).map((_, i) => <DashboardCard.Skeleton key={`skeleton-${i}`} />)
-            : result?.dashboards.map((item, idx) => {
-                if (item.type === 'provisioned') {
-                  return (
-                    <DashboardCard
-                      key={`provisioned-${item.dashboard.uid}-${idx}`}
-                      title={item.dashboard.title}
-                      imageUrl={getProvisionedDashboardImageUrl(item.index)}
-                      dashboard={item.dashboard}
-                      onClick={() => onUseProvisionedDashboard(item.dashboard)}
-                      showDatasourceProvidedBadge={true}
-                      dimThumbnail={true}
-                      kind="suggested_dashboard"
-                    />
-                  );
-                } else {
-                  const thumbnailUrl = getThumbnailUrl(item.dashboard);
-                  const imageUrl = thumbnailUrl || getLogoUrl(item.dashboard);
-                  const isLogo = !thumbnailUrl;
-                  const details = buildDashboardDetails(item.dashboard);
+        {!loadError && (
+          <Grid
+            gap={4}
+            columns={{
+              xs: 1,
+              sm: 2,
+              lg: 3,
+            }}
+          >
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => <DashboardCard.Skeleton key={`skeleton-${i}`} />)
+              : result?.dashboards.map((item, idx) => {
+                  if (item.type === 'provisioned') {
+                    return (
+                      <DashboardCard
+                        key={`provisioned-${item.dashboard.uid}-${idx}`}
+                        title={item.dashboard.title}
+                        imageUrl={getProvisionedDashboardImageUrl(item.index)}
+                        dashboard={item.dashboard}
+                        onClick={() => onUseProvisionedDashboard(item.dashboard)}
+                        showDatasourceProvidedBadge={true}
+                        dimThumbnail={true}
+                        kind="suggested_dashboard"
+                      />
+                    );
+                  } else {
+                    const thumbnailUrl = getThumbnailUrl(item.dashboard);
+                    const imageUrl = thumbnailUrl || getLogoUrl(item.dashboard);
+                    const isLogo = !thumbnailUrl;
+                    const details = buildDashboardDetails(item.dashboard);
 
-                  return (
-                    <DashboardCard
-                      key={`community-${item.dashboard.id}-${idx}`}
-                      title={item.dashboard.name}
-                      imageUrl={imageUrl}
-                      dashboard={item.dashboard}
-                      onClick={() => onPreviewCommunityDashboard(item.dashboard)}
-                      isLogo={isLogo}
-                      details={details}
-                      kind="suggested_dashboard"
-                    />
-                  );
-                }
-              }) || []}
-        </Grid>
+                    return (
+                      <DashboardCard
+                        key={`community-${item.dashboard.id}-${idx}`}
+                        title={item.dashboard.name}
+                        imageUrl={imageUrl}
+                        dashboard={item.dashboard}
+                        onClick={() => onPreviewCommunityDashboard(item.dashboard)}
+                        isLogo={isLogo}
+                        details={details}
+                        kind="suggested_dashboard"
+                      />
+                    );
+                  }
+                }) || []}
+          </Grid>
+        )}
       </div>
       <SuggestedDashboardsModal
         isOpen={showLibraryModal}

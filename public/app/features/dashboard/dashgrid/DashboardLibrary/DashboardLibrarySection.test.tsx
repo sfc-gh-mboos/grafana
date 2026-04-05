@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { render } from 'test/test-utils';
 
 import { locationService } from '@grafana/runtime';
@@ -268,6 +269,53 @@ describe('DashboardLibrarySection', () => {
         eventLocation: 'suggested_dashboards_modal_provisioned_tab',
         discoveryMethod: 'browse',
       });
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should show error alert with retry button when API fails', async () => {
+      mockFetchProvisionedDashboards.mockRejectedValue(new Error('Network error'));
+
+      render(<DashboardLibrarySection />, {
+        historyOptions: {
+          initialEntries: ['/test?dashboardLibraryDatasourceUid=test-uid'],
+        },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load provisioned dashboards')).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText('An error occurred while loading provisioned dashboards. Please try again.')
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    });
+
+    it('should retry loading when retry button is clicked', async () => {
+      const dashboards = [createMockPluginDashboard({ title: 'Dashboard 1', uid: 'uid-1' })];
+
+      mockFetchProvisionedDashboards.mockRejectedValueOnce(new Error('Network error'));
+      mockFetchProvisionedDashboards.mockResolvedValueOnce(dashboards);
+
+      render(<DashboardLibrarySection />, {
+        historyOptions: {
+          initialEntries: ['/test?dashboardLibraryDatasourceUid=test-uid'],
+        },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load provisioned dashboards')).toBeInTheDocument();
+      });
+
+      const retryButton = screen.getByRole('button', { name: 'Retry' });
+      await userEvent.click(retryButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-card-Dashboard 1')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Failed to load provisioned dashboards')).not.toBeInTheDocument();
     });
   });
 });

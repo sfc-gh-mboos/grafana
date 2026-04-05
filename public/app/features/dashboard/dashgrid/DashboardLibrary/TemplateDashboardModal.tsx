@@ -1,12 +1,12 @@
 import { css } from '@emotion/css';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom-v5-compat';
-import { useAsync } from 'react-use';
+import { useAsyncRetry } from 'react-use';
 
 import { GrafanaTheme2 } from '@grafana/data';
 import { t, Trans } from '@grafana/i18n';
 import { getBackendSrv, getDataSourceSrv, locationService } from '@grafana/runtime';
-import { Box, Grid, Modal, Text, useStyles2 } from '@grafana/ui';
+import { Alert, Box, Button, Grid, Modal, Stack, Text, useStyles2 } from '@grafana/ui';
 
 import { DASHBOARD_LIBRARY_ROUTES } from '../types';
 
@@ -70,27 +70,34 @@ export const TemplateDashboardModal = () => {
     locationService.push(templateUrl);
   };
 
-  const { value: dashboards = [], loading } = useAsync(async () => {
+  const [retryCount, setRetryCount] = useState(0);
+
+  const {
+    value: dashboards = [],
+    loading,
+    error,
+    retry,
+  } = useAsyncRetry(async () => {
     if (!isOpen) {
       return [];
     }
 
-    try {
-      const response = await getBackendSrv().get<GnetDashboardsResponse>(
-        `/api/gnet/dashboards?orgSlug=raintank&categorySlug=templates&includeScreenshots=true`,
-        undefined,
-        undefined,
-        {
-          showErrorAlert: false,
-        }
-      );
+    const response = await getBackendSrv().get<GnetDashboardsResponse>(
+      `/api/gnet/dashboards?orgSlug=raintank&categorySlug=templates&includeScreenshots=true`,
+      undefined,
+      undefined,
+      {
+        showErrorAlert: false,
+      }
+    );
 
-      return response.items;
-    } catch (error) {
-      console.error('Error loading template dashboards ', error);
-      return [];
-    }
-  }, [isOpen]);
+    return response.items;
+  }, [isOpen, retryCount]);
+
+  const handleRetry = () => {
+    setRetryCount((c) => c + 1);
+    retry();
+  };
 
   useEffect(() => {
     if (isOpen && !loading && dashboards.length > 0) {
@@ -104,7 +111,11 @@ export const TemplateDashboardModal = () => {
     }
   }, [isOpen, dashboards, entryPoint, testDataSource?.type, loading]);
 
-  if (!testDataSource || (dashboards.length === 0 && !loading)) {
+  if (!testDataSource) {
+    return null;
+  }
+
+  if (!loading && !error && dashboards.length === 0) {
     return null;
   }
 
@@ -124,32 +135,48 @@ export const TemplateDashboardModal = () => {
         </Text>
       </div>
       <Box direction="column" gap={4} display="flex">
-        <Grid
-          gap={4}
-          columns={{
-            xs: 1,
-            sm: 2,
-            lg: 3,
-          }}
-        >
-          {loading
-            ? Array.from({ length: 4 }).map((_, index) => <DashboardCard.Skeleton key={index} />)
-            : dashboards?.map((dashboard) => {
-                const thumbnail = dashboard.screenshots?.[0]?.links.find((l: Link) => l.rel === 'image')?.href ?? '';
-                const thumbnailUrl = thumbnail ? `/api/gnet${thumbnail}` : '';
+        {error ? (
+          <Stack direction="column" alignItems="center" gap={2}>
+            <Alert
+              title={t('dashboard-library.template-error-title', 'Failed to load template dashboards')}
+              severity="error"
+            >
+              <Trans i18nKey="dashboard-library.template-error-description">
+                An error occurred while loading template dashboards. Please try again.
+              </Trans>
+            </Alert>
+            <Button variant="secondary" onClick={handleRetry}>
+              <Trans i18nKey="dashboard-library.retry">Retry</Trans>
+            </Button>
+          </Stack>
+        ) : (
+          <Grid
+            gap={4}
+            columns={{
+              xs: 1,
+              sm: 2,
+              lg: 3,
+            }}
+          >
+            {loading
+              ? Array.from({ length: 4 }).map((_, index) => <DashboardCard.Skeleton key={index} />)
+              : dashboards?.map((dashboard) => {
+                  const thumbnail = dashboard.screenshots?.[0]?.links.find((l: Link) => l.rel === 'image')?.href ?? '';
+                  const thumbnailUrl = thumbnail ? `/api/gnet${thumbnail}` : '';
 
-                return (
-                  <DashboardCard
-                    key={dashboard.id}
-                    title={dashboard.name}
-                    imageUrl={thumbnailUrl}
-                    onClick={() => onPreviewDashboardClick(dashboard)}
-                    dashboard={dashboard}
-                    kind="template_dashboard"
-                  />
-                );
-              })}
-        </Grid>
+                  return (
+                    <DashboardCard
+                      key={dashboard.id}
+                      title={dashboard.name}
+                      imageUrl={thumbnailUrl}
+                      onClick={() => onPreviewDashboardClick(dashboard)}
+                      dashboard={dashboard}
+                      kind="template_dashboard"
+                    />
+                  );
+                })}
+          </Grid>
+        )}
       </Box>
     </Modal>
   );

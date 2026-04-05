@@ -5,7 +5,7 @@ import { selectors as e2eSelectors } from '@grafana/e2e-selectors';
 import { Trans, t } from '@grafana/i18n';
 import { SceneComponentProps, sceneGraph, SceneObjectBase, SceneObjectRef, VizPanel } from '@grafana/scenes';
 import { Dashboard } from '@grafana/schema';
-import { Button, ClipboardButton, Field, Input, Modal, RadioButtonGroup, Stack } from '@grafana/ui';
+import { Alert, Button, ClipboardButton, Field, Input, Modal, RadioButtonGroup, Stack } from '@grafana/ui';
 import { createSuccessNotification } from 'app/core/copy/appNotification';
 import { notifyApp } from 'app/core/reducers/appNotification';
 import { getTrackingSource, shareDashboardType } from 'app/features/dashboard/components/ShareModal/utils';
@@ -58,6 +58,7 @@ export interface ShareSnapshotTabState extends SceneShareTabState {
   snapshotName: string;
   selectedExpireOption: SelectableValue<number>;
   snapshotSharingOptions?: SnapshotSharingOptions;
+  sharingOptionsError?: Error;
 }
 
 // this is a hacky way to pass the uid with the dashboard to the backend so the dashboard can be found
@@ -85,16 +86,28 @@ export class ShareSnapshotTab extends SceneObjectBase<ShareSnapshotTabState> imp
   }
 
   private _onActivate() {
+    this.loadSharingOptions();
+  }
+
+  public loadSharingOptions = () => {
     getDashboardSnapshotSrv()
       .getSharingOptions()
       .then((shareOptions) => {
         if (this.isActive) {
           this.setState({
             snapshotSharingOptions: shareOptions,
+            sharingOptionsError: undefined,
+          });
+        }
+      })
+      .catch((error) => {
+        if (this.isActive) {
+          this.setState({
+            sharingOptionsError: error instanceof Error ? error : new Error('Failed to load sharing options'),
           });
         }
       });
-  }
+  };
 
   public getTabLabel() {
     return t('share-modal.tab-title.snapshot', 'Snapshot');
@@ -189,7 +202,7 @@ export class ShareSnapshotTab extends SceneObjectBase<ShareSnapshotTabState> imp
 }
 
 function ShareSnapshotTabRenderer({ model }: SceneComponentProps<ShareSnapshotTab>) {
-  const { snapshotName, selectedExpireOption, modalRef, snapshotSharingOptions } = model.useState();
+  const { snapshotName, selectedExpireOption, modalRef, snapshotSharingOptions, sharingOptionsError } = model.useState();
 
   const [snapshotResult, createSnapshot] = useAsyncFn(async (external = false) => {
     return model.onSnapshotCreate(external);
@@ -214,6 +227,25 @@ function ShareSnapshotTabRenderer({ model }: SceneComponentProps<ShareSnapshotTa
       {/* Before snapshot has been created show configuration  */}
       {!Boolean(snapshotResult.value) && (
         <>
+          {sharingOptionsError && (
+            <Alert
+              title={t('share-modal.snapshot.sharing-options-error-title', 'Failed to load sharing options')}
+              severity="warning"
+              onRemove={() => model.loadSharingOptions()}
+              buttonContent={t('share-modal.snapshot.retry', 'Retry')}
+            >
+              <Trans i18nKey="share-modal.snapshot.sharing-options-error-description">
+                External sharing options could not be loaded. You can still create local snapshots.
+              </Trans>
+            </Alert>
+          )}
+          {snapshotResult.error && (
+            <Alert title={t('share-modal.snapshot.create-error-title', 'Failed to create snapshot')} severity="error">
+              <Trans i18nKey="share-modal.snapshot.create-error-description">
+                An error occurred while creating the snapshot. Please try again.
+              </Trans>
+            </Alert>
+          )}
           <div>
             <p>
               <Trans i18nKey="share-modal.snapshot.info-text-1">
@@ -279,6 +311,16 @@ function ShareSnapshotTabRenderer({ model }: SceneComponentProps<ShareSnapshotTa
       {/* When snapshot has been created - show link and allow copy/deletion */}
       {snapshotResult.value && (
         <Stack direction="column" gap={0}>
+          {deleteSnapshotResult.error && (
+            <Alert
+              title={t('share-modal.snapshot.delete-error-title', 'Failed to delete snapshot')}
+              severity="error"
+            >
+              <Trans i18nKey="share-modal.snapshot.delete-error-description">
+                An error occurred while deleting the snapshot. Please try again.
+              </Trans>
+            </Alert>
+          )}
           <Field label={t('share-modal.snapshot.url-label', 'Snapshot URL')}>
             <Input
               data-testid={selectors.CopyUrlInput}
