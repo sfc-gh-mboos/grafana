@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { render, screen, waitFor } from 'test/test-utils';
+import userEvent from '@testing-library/user-event';
 
 import { setBackendSrv } from '@grafana/runtime';
 import server, { setupMockServer } from '@grafana/test-utils/server';
@@ -130,6 +131,71 @@ describe('TemplateDashboardModal', () => {
         expect(screen.getByText('A test template dashboard')).toBeInTheDocument();
         expect(screen.getByText('A test template dashboard 2')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should show error alert with retry button when API fails', async () => {
+      server.use(
+        http.get('/api/gnet/dashboards', () => {
+          return HttpResponse.error();
+        })
+      );
+
+      render(<TemplateDashboardModal />, {
+        historyOptions: { initialEntries: [`/dashboards?templateDashboards=true`] },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load template dashboards')).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText('An error occurred while loading template dashboards. Please try again.')
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    });
+
+    it('should retry loading when retry button is clicked', async () => {
+      let requestCount = 0;
+      server.use(
+        http.get('/api/gnet/dashboards', () => {
+          requestCount++;
+          if (requestCount === 1) {
+            return HttpResponse.error();
+          }
+          return HttpResponse.json({
+            page: 1,
+            pages: 1,
+            items: [
+              {
+                id: 1,
+                name: 'Test Template Dashboard',
+                description: 'A test template dashboard',
+                downloads: 100,
+                datasource: 'grafana-testdata-datasource',
+              },
+            ],
+          });
+        })
+      );
+
+      render(<TemplateDashboardModal />, {
+        historyOptions: { initialEntries: [`/dashboards?templateDashboards=true`] },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load template dashboards')).toBeInTheDocument();
+      });
+
+      const retryButton = screen.getByRole('button', { name: 'Retry' });
+      await userEvent.click(retryButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Test Template Dashboard' })).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Failed to load template dashboards')).not.toBeInTheDocument();
     });
   });
 });

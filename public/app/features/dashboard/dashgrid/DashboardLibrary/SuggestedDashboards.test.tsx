@@ -1,4 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { render } from 'test/test-utils';
 
 import { SuggestedDashboards } from './SuggestedDashboards';
@@ -181,6 +182,51 @@ describe('SuggestedDashboards', () => {
       expect(
         screen.getByText('Browse and select from data-source provided or community dashboards')
       ).toBeInTheDocument();
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should show error alert with retry button when API fails', async () => {
+      mockFetchProvisionedDashboards.mockRejectedValue(new Error('Network error'));
+      mockFetchCommunityDashboards.mockRejectedValue(new Error('Network error'));
+
+      render(<SuggestedDashboards datasourceUid="test-uid" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load suggested dashboards')).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByText('An error occurred while loading suggested dashboards. Please try again.')
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    });
+
+    it('should retry loading when retry button is clicked', async () => {
+      mockFetchProvisionedDashboards.mockRejectedValueOnce(new Error('Network error'));
+      mockFetchCommunityDashboards.mockRejectedValueOnce(new Error('Network error'));
+
+      mockFetchProvisionedDashboards.mockResolvedValueOnce([createMockPluginDashboard({ title: 'Dashboard 1' })]);
+      mockFetchCommunityDashboards.mockResolvedValueOnce({
+        page: 1,
+        pages: 1,
+        items: [],
+      });
+
+      render(<SuggestedDashboards datasourceUid="test-uid" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load suggested dashboards')).toBeInTheDocument();
+      });
+
+      const retryButton = screen.getByRole('button', { name: 'Retry' });
+      await userEvent.click(retryButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-card-Dashboard 1')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Failed to load suggested dashboards')).not.toBeInTheDocument();
     });
   });
 });
