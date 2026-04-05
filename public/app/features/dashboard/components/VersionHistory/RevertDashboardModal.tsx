@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { Trans, t } from '@grafana/i18n';
-import { ConfirmModal } from '@grafana/ui';
+import { Alert, ConfirmModal, Stack } from '@grafana/ui';
 
 import { useDashboardRestore } from './useDashboardRestore';
 export interface RevertDashboardModalProps {
@@ -11,7 +11,6 @@ export interface RevertDashboardModalProps {
 }
 
 export const RevertDashboardModal = ({ hideModal, id, version }: RevertDashboardModalProps) => {
-  // TODO: how should state.error be handled?
   const { state, onRestoreDashboard } = useDashboardRestore(id, version);
 
   useEffect(() => {
@@ -28,17 +27,31 @@ export const RevertDashboardModal = ({ hideModal, id, version }: RevertDashboard
       onDismiss={hideModal}
       onConfirm={onRestoreDashboard}
       body={
-        <p>
-          <Trans i18nKey="dashboard.revert-dashboard-modal.body-restore-version">
-            Are you sure you want to restore the dashboard to version {{ version }}? All unsaved changes will be lost.
-          </Trans>
-        </p>
+        <Stack direction="column" gap={2}>
+          {state.error && (
+            <Alert
+              title={t('dashboard.revert-dashboard-modal.error-title', 'Failed to restore dashboard')}
+              severity="error"
+            >
+              <Trans i18nKey="dashboard.revert-dashboard-modal.error-description">
+                An error occurred while restoring the dashboard. Please try again.
+              </Trans>
+            </Alert>
+          )}
+          <p>
+            <Trans i18nKey="dashboard.revert-dashboard-modal.body-restore-version">
+              Are you sure you want to restore the dashboard to version {{ version }}? All unsaved changes will be lost.
+            </Trans>
+          </p>
+        </Stack>
       }
-      confirmText={t(
-        'dashboard.revert-dashboard-modal.confirmText-restore-version',
-        'Yes, restore to version {{version}}',
-        { version }
-      )}
+      confirmText={
+        state.error
+          ? t('dashboard.revert-dashboard-modal.confirmText-retry', 'Retry restore')
+          : t('dashboard.revert-dashboard-modal.confirmText-restore-version', 'Yes, restore to version {{version}}', {
+              version,
+            })
+      }
     />
   );
 };

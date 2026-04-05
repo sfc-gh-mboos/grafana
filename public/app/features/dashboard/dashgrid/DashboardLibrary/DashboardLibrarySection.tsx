@@ -1,12 +1,12 @@
 import { css } from '@emotion/css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom-v5-compat';
-import { useAsync } from 'react-use';
+import { useAsyncRetry } from 'react-use';
 
 import { GrafanaTheme2 } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
 import { getDataSourceSrv, locationService } from '@grafana/runtime';
-import { useStyles2, Stack, Grid, Pagination, EmptyState, Button } from '@grafana/ui';
+import { Alert, Button, EmptyState, Grid, Pagination, Stack, useStyles2 } from '@grafana/ui';
 import { PluginDashboard } from 'app/types/plugins';
 
 import { DASHBOARD_LIBRARY_ROUTES } from '../types';
@@ -42,7 +42,12 @@ export const DashboardLibrarySection = () => {
     return ds?.type || '';
   }, [datasourceUid]);
 
-  const { value: templateDashboards, loading } = useAsync(async (): Promise<PluginDashboard[]> => {
+  const {
+    value: templateDashboards,
+    loading,
+    error,
+    retry,
+  } = useAsyncRetry(async (): Promise<PluginDashboard[]> => {
     if (!datasourceUid) {
       return [];
     }
@@ -80,7 +85,8 @@ export const DashboardLibrarySection = () => {
   const styles = useStyles2(getStyles);
 
   // Determine what to show
-  const showEmptyState = !loading && (!templateDashboards || templateDashboards.length === 0);
+  const showError = !loading && error;
+  const showEmptyState = !loading && !error && (!templateDashboards || templateDashboards.length === 0);
 
   const onUseProvisionedDashboard = async (dashboard: PluginDashboard) => {
     DashboardLibraryInteractions.itemClicked({
@@ -112,7 +118,21 @@ export const DashboardLibrarySection = () => {
 
   return (
     <Stack direction="column" gap={2} justifyContent="space-between" height="100%">
-      {showEmptyState ? (
+      {showError ? (
+        <Stack direction="column" alignItems="center" gap={2}>
+          <Alert
+            title={t('dashboard-library.provisioned-error-title', 'Failed to load provisioned dashboards')}
+            severity="error"
+          >
+            <Trans i18nKey="dashboard-library.provisioned-error-description">
+              An error occurred while loading provisioned dashboards. Please try again.
+            </Trans>
+          </Alert>
+          <Button variant="secondary" onClick={retry}>
+            <Trans i18nKey="dashboard-library.retry">Retry</Trans>
+          </Button>
+        </Stack>
+      ) : showEmptyState ? (
         <EmptyState
           variant="call-to-action"
           message={

@@ -1,11 +1,11 @@
 import { css } from '@emotion/css';
 import { useState } from 'react';
-import { useAsync } from 'react-use';
+import { useAsyncRetry } from 'react-use';
 
 import { GrafanaTheme2 } from '@grafana/data';
-import { Trans } from '@grafana/i18n';
+import { Trans, t } from '@grafana/i18n';
 import { getDataSourceSrv, locationService } from '@grafana/runtime';
-import { Button, useStyles2, Text, Box, Stack, Grid } from '@grafana/ui';
+import { Alert, Box, Button, Grid, Stack, Text, useStyles2 } from '@grafana/ui';
 import { PluginDashboard } from 'app/types/plugins';
 
 import { DASHBOARD_LIBRARY_ROUTES } from '../types';
@@ -28,7 +28,11 @@ interface Props {
 export const BasicProvisionedDashboardsEmptyPage = ({ datasourceUid }: Props) => {
   const [showAll, setShowAll] = useState(false);
 
-  const { value: templateDashboards } = useAsync(async (): Promise<PluginDashboard[]> => {
+  const {
+    value: templateDashboards,
+    error,
+    retry,
+  } = useAsyncRetry(async (): Promise<PluginDashboard[]> => {
     if (!datasourceUid) {
       return [];
     }
@@ -85,18 +89,34 @@ export const BasicProvisionedDashboardsEmptyPage = ({ datasourceUid }: Props) =>
     locationService.push(templateUrl);
   };
 
-  if (!templateDashboards?.length) {
+  if (!error && !templateDashboards?.length) {
     return null;
   }
 
   return (
     <Box borderColor="strong" borderStyle="dashed" padding={4} flex={1} data-testid="provisioned-dashboards-empty-page">
       <Stack direction="column" alignItems="center" gap={2}>
-        <Text element="h3" textAlignment="center" weight="medium">
-          <Trans i18nKey="dashboard.empty.start-with-suggested-dashboards">
-            Start with a pre-made dashboard from your data source
-          </Trans>
-        </Text>
+        {error ? (
+          <>
+            <Alert
+              title={t('dashboard-library.provisioned-error-title', 'Failed to load provisioned dashboards')}
+              severity="error"
+            >
+              <Trans i18nKey="dashboard-library.provisioned-error-description">
+                An error occurred while loading provisioned dashboards. Please try again.
+              </Trans>
+            </Alert>
+            <Button variant="secondary" onClick={retry}>
+              <Trans i18nKey="dashboard-library.retry">Retry</Trans>
+            </Button>
+          </>
+        ) : (
+          <>
+            <Text element="h3" textAlignment="center" weight="medium">
+              <Trans i18nKey="dashboard.empty.start-with-suggested-dashboards">
+                Start with a pre-made dashboard from your data source
+              </Trans>
+            </Text>
         <Box marginTop={2}>
           <Grid
             gap={4}
@@ -122,20 +142,22 @@ export const BasicProvisionedDashboardsEmptyPage = ({ datasourceUid }: Props) =>
             }) || []}
           </Grid>
         </Box>
-        {hasMoreThanThree && (
-          <Button
-            variant="secondary"
-            fill="outline"
-            size="sm"
-            onClick={() => setShowAll((prev) => !prev)}
-            className={styles.showMoreButton}
-          >
-            {showAll ? (
-              <Trans i18nKey="dashboard.empty.show-less-dashboards">Show less</Trans>
-            ) : (
-              <Trans i18nKey="dashboard.empty.show-more-dashboards">Show more</Trans>
+            {hasMoreThanThree && (
+              <Button
+                variant="secondary"
+                fill="outline"
+                size="sm"
+                onClick={() => setShowAll((prev) => !prev)}
+                className={styles.showMoreButton}
+              >
+                {showAll ? (
+                  <Trans i18nKey="dashboard.empty.show-less-dashboards">Show less</Trans>
+                ) : (
+                  <Trans i18nKey="dashboard.empty.show-more-dashboards">Show more</Trans>
+                )}
+              </Button>
             )}
-          </Button>
+          </>
         )}
       </Stack>
     </Box>

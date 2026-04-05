@@ -5,7 +5,7 @@ import { isEmptyObject, SelectableValue, VariableRefresh } from '@grafana/data';
 import { selectors as e2eSelectors } from '@grafana/e2e-selectors';
 import { Trans, t } from '@grafana/i18n';
 import { getBackendSrv } from '@grafana/runtime';
-import { Button, ClipboardButton, Field, Input, LinkButton, Modal, Select, Spinner, Stack } from '@grafana/ui';
+import { Alert, Button, ClipboardButton, Field, Input, LinkButton, Modal, Select, Spinner, Stack } from '@grafana/ui';
 import { getTimeSrv } from 'app/features/dashboard/services/TimeSrv';
 import { DashboardModel } from 'app/features/dashboard/state/DashboardModel';
 import { PanelModel } from 'app/features/dashboard/state/PanelModel';
@@ -29,6 +29,9 @@ interface State {
   timeoutSeconds: number;
   externalEnabled: boolean;
   sharingButtonText: string;
+  sharingOptionsError?: Error;
+  snapshotError?: Error;
+  deleteError?: Error;
 }
 
 const selectors = e2eSelectors.pages.ShareDashboardModal.SnapshotScene;
@@ -77,11 +80,18 @@ export class ShareSnapshot extends PureComponent<Props, State> {
   }
 
   async getSnaphotShareOptions() {
-    const shareOptions = await getDashboardSnapshotSrv().getSharingOptions();
-    this.setState({
-      sharingButtonText: shareOptions.externalSnapshotName,
-      externalEnabled: shareOptions.externalEnabled,
-    });
+    try {
+      const shareOptions = await getDashboardSnapshotSrv().getSharingOptions();
+      this.setState({
+        sharingButtonText: shareOptions.externalSnapshotName,
+        externalEnabled: shareOptions.externalEnabled,
+        sharingOptionsError: undefined,
+      });
+    } catch (error) {
+      this.setState({
+        sharingOptionsError: error instanceof Error ? error : new Error('Failed to load sharing options'),
+      });
+    }
   }
 
   createSnapshot = (external?: boolean) => () => {
@@ -117,8 +127,8 @@ export class ShareSnapshot extends PureComponent<Props, State> {
         deleteUrl: results.deleteUrl,
         snapshotUrl: results.url,
         step: 2,
+        snapshotError: undefined,
       });
-    } finally {
       if (external) {
         DashboardInteractions.publishSnapshotClicked({
           expires: snapshotExpires,
@@ -132,6 +142,11 @@ export class ShareSnapshot extends PureComponent<Props, State> {
           shareResource: getTrackingSource(this.props.panel),
         });
       }
+    } catch (error) {
+      this.setState({
+        snapshotError: error instanceof Error ? error : new Error('Failed to create snapshot'),
+      });
+    } finally {
       this.setState({ isLoading: false });
     }
   };
@@ -205,8 +220,14 @@ export class ShareSnapshot extends PureComponent<Props, State> {
 
   deleteSnapshot = async () => {
     const { deleteUrl } = this.state;
-    await getBackendSrv().get(deleteUrl);
-    this.setState({ step: 3 });
+    try {
+      await getBackendSrv().get(deleteUrl);
+      this.setState({ step: 3, deleteError: undefined });
+    } catch (error) {
+      this.setState({
+        deleteError: error instanceof Error ? error : new Error('Failed to delete snapshot'),
+      });
+    }
   };
 
   getSnapshotUrl = () => {
@@ -230,8 +251,16 @@ export class ShareSnapshot extends PureComponent<Props, State> {
 
   renderStep1() {
     const { onDismiss } = this.props;
-    const { snapshotName, selectedExpireOption, timeoutSeconds, isLoading, sharingButtonText, externalEnabled } =
-      this.state;
+    const {
+      snapshotName,
+      selectedExpireOption,
+      timeoutSeconds,
+      isLoading,
+      sharingButtonText,
+      externalEnabled,
+      sharingOptionsError,
+      snapshotError,
+    } = this.state;
 
     const snapshotNameTranslation = t('share-modal.snapshot.name', `Snapshot name`);
     const expireTranslation = t('share-modal.snapshot.expire', `Expire`);
@@ -243,6 +272,25 @@ export class ShareSnapshot extends PureComponent<Props, State> {
 
     return (
       <>
+        {sharingOptionsError && (
+          <Alert
+            title={t('share-modal.snapshot.sharing-options-error-title', 'Failed to load sharing options')}
+            severity="warning"
+            onRemove={() => this.getSnaphotShareOptions()}
+            buttonContent={t('share-modal.snapshot.retry', 'Retry')}
+          >
+            <Trans i18nKey="share-modal.snapshot.sharing-options-error-description">
+              External sharing options could not be loaded. You can still create local snapshots.
+            </Trans>
+          </Alert>
+        )}
+        {snapshotError && (
+          <Alert title={t('share-modal.snapshot.create-error-title', 'Failed to create snapshot')} severity="error">
+            <Trans i18nKey="share-modal.snapshot.create-error-description">
+              An error occurred while creating the snapshot. Please try again.
+            </Trans>
+          </Alert>
+        )}
         <div>
           <p>
             <Trans i18nKey="share-modal.snapshot.info-text-1">
@@ -297,10 +345,17 @@ export class ShareSnapshot extends PureComponent<Props, State> {
   }
 
   renderStep2() {
-    const { snapshotUrl } = this.state;
+    const { snapshotUrl, deleteError } = this.state;
 
     return (
       <Stack direction="column" gap={0}>
+        {deleteError && (
+          <Alert title={t('share-modal.snapshot.delete-error-title', 'Failed to delete snapshot')} severity="error">
+            <Trans i18nKey="share-modal.snapshot.delete-error-description">
+              An error occurred while deleting the snapshot. Please try again.
+            </Trans>
+          </Alert>
+        )}
         <Field label={t('share-modal.snapshot.url-label', 'Snapshot URL')}>
           <Input
             id="snapshot-url-input"
