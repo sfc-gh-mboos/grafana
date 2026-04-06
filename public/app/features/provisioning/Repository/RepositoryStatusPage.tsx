@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { useLocation } from 'react-router';
 import { useParams } from 'react-router-dom-v5-compat';
 
 import { SelectableValue, urlUtil } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
+import { locationService } from '@grafana/runtime';
 import { Alert, EmptyState, Spinner, Stack, Tab, TabContent, TabsBar, Text, TextLink } from '@grafana/ui';
 import { useListRepositoryQuery } from 'app/api/clients/provisioning/v0alpha1';
 import { Page } from 'app/core/components/Page/Page';
@@ -30,7 +30,7 @@ export default function RepositoryStatusPage() {
     watch: true,
   });
   const data = query.data?.items?.[0];
-  const location = useLocation();
+  const location = locationService.getLocation();
   const [queryParams] = useQueryParams();
 
   const tab = queryParams['tab'] ?? TabSelection.Overview;

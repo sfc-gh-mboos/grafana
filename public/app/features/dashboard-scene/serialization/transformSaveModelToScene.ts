@@ -415,6 +415,7 @@ export function createDashboardSceneFromDashboardModel(
       description: oldModel.description,
       editable: oldModel.editable,
       preload: dto.preload ?? false,
+      collapseRowsOnLoad: dto.collapseRowsOnLoad ?? false,
       id: oldModel.id,
       isDirty: false,
       links: oldModel.links || [],
@@ -454,7 +455,27 @@ export function createDashboardSceneFromDashboardModel(
   // Enable panel profiling for this dashboard using the composed SceneRenderProfiler
   enablePanelProfilingForDashboard(dashboardScene, uid);
 
+  // Collapse rows if dashboard setting is enabled
+  applyCollapseRowsOnLoadIfNeeded(dashboardScene);
+
   return dashboardScene;
+}
+
+/**
+ * If collapseRowsOnLoad is enabled, collapse all rows in the dashboard.
+ * Works with both DefaultGridLayoutManager and RowsLayoutManager.
+ */
+export function applyCollapseRowsOnLoadIfNeeded(scene: DashboardScene) {
+  if (!scene.state.collapseRowsOnLoad) {
+    return;
+  }
+
+  const body = scene.state.body;
+  if (body instanceof DefaultGridLayoutManager) {
+    body.collapseAllRows();
+  } else if (body instanceof RowsLayoutManager) {
+    body.collapseAllRows();
+  }
 }
 
 export function buildGridItemForPanel(panel: PanelModel): DashboardGridItem {

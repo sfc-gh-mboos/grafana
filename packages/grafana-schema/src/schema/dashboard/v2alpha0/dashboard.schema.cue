@@ -35,6 +35,9 @@ DashboardV2Spec: {
   // When set to true, the dashboard will load all panels in the dashboard when it's loaded.
   preload: bool
 
+  // When set to true, all rows will be collapsed when the dashboard loads.
+  collapseRowsOnLoad: bool | *false
+
   // Plugins only. The version of the dashboard installed together with the plugin.
   // This is used to determine if the dashboard should be updated when the plugin is updated.
   revision?: uint16

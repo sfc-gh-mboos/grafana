@@ -1,8 +1,8 @@
 import { css } from '@emotion/css';
-import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import { AlertErrorPayload, AlertPayload, AppEvents, GrafanaTheme2 } from '@grafana/data';
+import { locationService } from '@grafana/runtime';
 import { useStyles2, Stack } from '@grafana/ui';
 import { appEvents } from 'app/core/app_events';
 import { useGrafana } from 'app/core/context/GrafanaContext';
@@ -23,13 +23,6 @@ export function AppNotificationList() {
   const dispatch = useDispatch();
   const styles = useStyles2(getStyles);
   const { chrome } = useGrafana();
-  const location = useLocation();
-
-  // Store location ref to avoid re-registering listeners on route changes
-  const locationRef = useRef(location);
-  useEffect(() => {
-    locationRef.current = location;
-  }, [location]);
 
   useEffect(() => {
     // Suppress error notifications in kiosk mode on dashboards.
@@ -38,7 +31,8 @@ export function AppNotificationList() {
     // degrading the viewing experience. Other notification types (success, warning, info)
     // are still shown as they indicate successful operations or important information.
     const handleErrorAlert = (payload?: AlertErrorPayload) => {
-      const isKioskDashboard = chrome.state.getValue().kioskMode && locationRef.current.pathname.startsWith('/d/');
+      const currentPathname = locationService.getLocation().pathname;
+      const isKioskDashboard = chrome.state.getValue().kioskMode && currentPathname.startsWith('/d/');
       if (isKioskDashboard || !payload) {
         return;
       }

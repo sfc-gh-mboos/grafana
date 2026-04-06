@@ -92,6 +92,7 @@ export function transformSceneToSaveModelSchemaV2(scene: DashboardScene, isSnaps
     cursorSync: getCursorSync(sceneDash),
     liveNow: getLiveNow(sceneDash),
     preload: sceneDash.preload ?? defaultDashboardV2Spec().preload,
+    collapseRowsOnLoad: sceneDash.collapseRowsOnLoad ?? defaultDashboardV2Spec().collapseRowsOnLoad,
     editable: sceneDash.editable ?? defaultDashboardV2Spec().editable,
     links: (sceneDash.links || []).map((link) => ({
       title: link.title ?? defaultDashboardLink().title,
@@ -739,6 +740,13 @@ export function validateDashboardSchemaV2(dash: unknown): dash is DashboardV2Spe
   }
   if ('preload' in dash && dash.preload !== undefined && typeof dash.preload !== 'boolean') {
     throw new Error('Preload is not a boolean');
+  }
+  if (
+    'collapseRowsOnLoad' in dash &&
+    dash.collapseRowsOnLoad !== undefined &&
+    typeof dash.collapseRowsOnLoad !== 'boolean'
+  ) {
+    throw new Error('CollapseRowsOnLoad is not a boolean');
   }
   if ('editable' in dash && dash.editable !== undefined && typeof dash.editable !== 'boolean') {
     throw new Error('Editable is not a boolean');

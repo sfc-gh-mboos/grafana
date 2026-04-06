@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -118,6 +119,13 @@ func (s *legacyStorage) Create(ctx context.Context,
 	cmd := &dtos.CreateShortURLCmd{
 		Path: p.Spec.Path,
 		UID:  p.Name,
+	}
+	if expiresAtValue, ok := p.GetAnnotations()["grafana.app/expires-at"]; ok {
+		expiresAt, err := strconv.ParseInt(expiresAtValue, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid expiration annotation: %w", err)
+		}
+		cmd.ExpiresAt = &expiresAt
 	}
 	out, err := s.service.CreateShortURL(ctx, requester, cmd)
 	if err != nil {

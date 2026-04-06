@@ -6,6 +6,7 @@ type ShortURL struct {
 }
 
 type CreateShortURLCmd struct {
-	Path string `json:"path"`
-	UID  string `json:"uid,omitempty"`
+	Path      string `json:"path"`
+	UID       string `json:"uid,omitempty"`
+	ExpiresAt *int64 `json:"expiresAt,omitempty"`
 }

@@ -2,6 +2,7 @@ package shorturlimpl
 
 import (
 	"context"
+	"time"
 
 	"github.com/grafana/grafana/pkg/apimachinery/identity"
 	"github.com/grafana/grafana/pkg/infra/db"
@@ -22,8 +23,9 @@ type sqlStore struct {
 
 func (s sqlStore) Get(ctx context.Context, user identity.Requester, uid string) (*shorturls.ShortUrl, error) {
 	var shortURL shorturls.ShortUrl
+	now := time.Now().Unix()
 	err := s.db.WithDbSession(ctx, func(dbSession *db.Session) error {
-		exists, err := dbSession.Where("org_id=? AND uid=?", user.GetOrgID(), uid).Get(&shortURL)
+		exists, err := dbSession.Where("org_id=? AND uid=? AND (expires_at IS NULL OR expires_at > ?)", user.GetOrgID(), uid, now).Get(&shortURL)
 		if err != nil {
 			return err
 		}

@@ -8,11 +8,14 @@ import { defaultStatus } from '../../../../apps/shorturl/plugin/src/generated/sh
 
 import { createShortLink, createAndCopyShortLink, getLogsPermalinkRange, buildShortUrl } from './shortLinks';
 
+const postMock = jest.fn();
+
 jest.mock('@grafana/runtime', () => ({
   ...jest.requireActual('@grafana/runtime'),
   getBackendSrv: () => {
     return {
-      post: () => {
+      post: (...args: unknown[]) => {
+        postMock(...args);
         return Promise.resolve({ url: 'https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1' });
       },
     };
@@ -57,6 +60,16 @@ describe('createShortLink', () => {
   it('creates short link', async () => {
     const shortUrl = await createShortLink('d/edhmipji89b0gb/welcome?orgId=1&from=now-6h&to=now&timezone=browser');
     expect(shortUrl).toBe('https://www.test.grafana.com/goto/bewyw48durgu8d?orgId=1');
+  });
+
+  it('sends expiresAt when provided', async () => {
+    const expiresAt = 1742772000;
+    await createShortLink('d/edhmipji89b0gb/welcome?orgId=1', { expiresAt });
+
+    expect(postMock).toHaveBeenCalledWith('/api/short-urls', {
+      path: 'd/edhmipji89b0gb/welcome?orgId=1',
+      expiresAt,
+    });
   });
 });
 

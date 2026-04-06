@@ -49,6 +49,9 @@ func (s ShortURLService) CreateShortURL(ctx context.Context, user identity.Reque
 	if strings.Contains(relPath, "../") {
 		return nil, shorturls.ErrShortURLInvalidPath.Errorf("path cannot contain '../': %s", relPath)
 	}
+	if cmd.ExpiresAt != nil && *cmd.ExpiresAt <= time.Now().Unix() {
+		return nil, shorturls.ErrShortURLBadRequest.Errorf("expiresAt must be in the future")
+	}
 
 	uid := cmd.UID
 	if uid == "" {
@@ -78,6 +81,7 @@ func (s ShortURLService) CreateShortURL(ctx context.Context, user identity.Reque
 		Uid:       uid,
 		Path:      relPath,
 		CreatedAt: now,
+		ExpiresAt: cmd.ExpiresAt,
 	}
 	shortURL.CreatedBy, _ = user.GetInternalID()
 

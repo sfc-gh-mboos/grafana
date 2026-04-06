@@ -1,0 +1,139 @@
+# Cursor Ignore File
+# Excludes generated code, vendor directories, build artifacts, and change logs
+
+# =============================================================================
+# Generated Code
+# =============================================================================
+
+# Go generated files
+**/*_gen.go
+**/wire_gen.go
+
+# TypeScript/JavaScript generated files
+**/*.gen.ts
+**/*.gen.js
+
+# Schema and spec generated files
+**/types.spec.gen.ts
+**/types.status.gen.ts
+**/types.metadata.gen.ts
+
+# Dashboard schema generated files
+packages/grafana-schema/src/raw/**/*_types.gen.ts
+pkg/kinds/**/*_spec_gen.go
+
+# =============================================================================
+# Vendor Directories
+# =============================================================================
+
+vendor/
+node_modules/
+
+# =============================================================================
+# Build Artifacts
+# =============================================================================
+
+# Main build outputs
+dist/
+public/build/
+bin/
+
+# Package build outputs
+packages/**/dist/
+packages/**/compiled/
+packages/**/.rpt2_cache/
+packages/**/tsdoc-metadata.json
+packages/**/package.tgz
+
+# Plugin dist folders
+public/app/plugins/**/dist/
+
+# E2E and test plugin builds
+e2e-playwright/test-plugins/*/dist/
+
+# Go build outputs
+/grafana
+pkg/cmd/grafana-cli/grafana-cli
+pkg/cmd/grafana-server/grafana-server
+pkg/cmd/grafana-server/debug
+pkg/cmd/grafana-server/__debug_bin
+
+# Scripts build outputs
+scripts/go/bin/
+
+# =============================================================================
+# Change Logs
+# =============================================================================
+
+CHANGELOG.md
+**/CHANGELOG.md
+.changelog-archive/
+
+# =============================================================================
+# Test & Coverage Outputs
+# =============================================================================
+
+coverage/
+*.cov
+*.out
+profile.cov
+profile.out
+coverage.txt
+coverage-summary.json
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+
+# E2E outputs
+e2e/tmp/
+e2e/**/screenshots/
+e2e/**/videos/
+e2e/benchmarks/**/results/
+e2e/build_results.zip
+e2e/server.log
+
+# =============================================================================
+# Cache & Temporary Files
+# =============================================================================
+
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.nx/
+.eslintcache
+.stylelintcache
+/.awcache/
+tsconfig.tsbuildinfo
+compilation-stats.json
+
+# =============================================================================
+# Generated Localization Files
+# =============================================================================
+
+public/locales/_build/
+public/locales/*/*.js
+
+# =============================================================================
+# API & Documentation Generated Files
+# =============================================================================
+
+public/api-spec.json
+docs/sources/packages_api/
+
+# =============================================================================
+# Data & Runtime Files
+# =============================================================================
+
+data/
+grafana-kv-data/
+reports/
+tmp/
+
+# =============================================================================
+# Wire Test Data (testdata contains expected outputs)
+# =============================================================================
+
+pkg/build/wire/internal/wire/testdata/

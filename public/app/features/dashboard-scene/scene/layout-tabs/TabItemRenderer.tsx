@@ -1,9 +1,10 @@
 import { css, cx } from '@emotion/css';
 import { Draggable } from '@hello-pangea/dnd';
-import { useLocation } from 'react-router';
+import { useNavigate } from 'react-router-dom-v5-compat';
 
 import { GrafanaTheme2, locationUtil, textUtil } from '@grafana/data';
 import { t } from '@grafana/i18n';
+import { locationService } from '@grafana/runtime';
 import { SceneComponentProps, sceneGraph } from '@grafana/scenes';
 import { Box, Icon, Tab, TabContent, Tooltip, useElementSelection, usePointerDistance, useStyles2 } from '@grafana/ui';
 
@@ -26,7 +27,8 @@ export function TabItemRenderer({ model }: SceneComponentProps<TabItem>) {
   const urlKey = parentLayout.getUrlKey();
   const isActive = mySlug === currentTabSlug;
   const myIndex = parentLayout.getTabsIncludingRepeats().findIndex((tab) => tab === model);
-  const location = useLocation();
+  const location = locationService.getLocation();
+  const navigate = useNavigate();
   const href = textUtil.sanitize(locationUtil.getUrlForPartial(location, { [urlKey]: mySlug }));
   const styles = useStyles2(getStyles);
   const pointerDistance = usePointerDistance();
@@ -78,6 +80,10 @@ export function TabItemRenderer({ model }: SceneComponentProps<TabItem>) {
             suffix={isConditionallyHidden ? IsHiddenSuffix : undefined}
             href={href}
             aria-selected={isActive}
+            onChangeTab={(e) => {
+              e.preventDefault();
+              navigate(href);
+            }}
             onPointerDown={(evt) => {
               evt.stopPropagation();
               pointerDistance.set(evt);

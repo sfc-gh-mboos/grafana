@@ -521,9 +521,10 @@ func TestV2alpha1ToV1beta1BasicFields(t *testing.T) {
 			Title:       "Test Dashboard",
 			Description: &description,
 			Tags:        []string{"tag1", "tag2"},
-			CursorSync:  dashv2alpha1.DashboardDashboardCursorSyncCrosshair,
-			Preload:     true,
-			Editable:    &editable,
+			CursorSync:         dashv2alpha1.DashboardDashboardCursorSyncCrosshair,
+			Preload:            true,
+			CollapseRowsOnLoad: true,
+			Editable:           &editable,
 			LiveNow:     &liveNow,
 			Revision:    &revision,
 			Layout: dashv2alpha1.DashboardGridLayoutKindOrRowsLayoutKindOrAutoGridLayoutKindOrTabsLayoutKind{
@@ -553,6 +554,7 @@ func TestV2alpha1ToV1beta1BasicFields(t *testing.T) {
 	assert.Contains(t, tags, "tag2")
 	assert.Equal(t, 1, dashboard["graphTooltip"]) // Crosshair = 1
 	assert.Equal(t, true, dashboard["preload"])
+	assert.Equal(t, true, dashboard["collapseRowsOnLoad"])
 	assert.Equal(t, true, dashboard["editable"])
 	assert.Equal(t, false, dashboard["liveNow"])
 	// Revision can be uint16 or int depending on JSON unmarshaling

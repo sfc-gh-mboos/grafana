@@ -197,6 +197,36 @@ describe('VersionSettings', () => {
     expect(screen.getByRole('button', { name: /compare versions/i })).toBeInTheDocument();
   });
 
+  test('shows an error and retry button when initial history fetch fails', async () => {
+    historySrv.getHistoryList = jest.fn().mockRejectedValueOnce(new Error('Network is down'));
+
+    setup();
+
+    expect(await screen.findByText(/failed to load version history/i)).toBeInTheDocument();
+    expect(screen.getByText('Network is down')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(screen.queryByText(/fetching history list/i)).not.toBeInTheDocument();
+  });
+
+  test('retries fetching history after an initial failure', async () => {
+    historySrv.getHistoryList = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('Failed first time'))
+      .mockResolvedValueOnce({
+        continueToken: '',
+        versions: versions.versions.slice(0, 2),
+      });
+
+    setup();
+
+    const retryButton = await screen.findByRole('button', { name: /retry/i });
+    await user.click(retryButton);
+
+    expect(historySrv.getHistoryList).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument());
+    expect(screen.queryByText(/failed to load version history/i)).not.toBeInTheDocument();
+  });
+
   test('selecting two versions and clicking compare button should render compare view', async () => {
     historySrv.getHistoryList = jest.fn().mockResolvedValue({
       continueToken: versions.continueToken,

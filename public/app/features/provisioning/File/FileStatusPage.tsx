@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router';
-import { useParams } from 'react-router-dom-v5-compat';
+import { useNavigate, useParams } from 'react-router-dom-v5-compat';
 import AutoSizer from 'react-virtualized-auto-sizer';
 
 import { urlUtil } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
-import { isFetchError } from '@grafana/runtime';
+import { isFetchError, locationService } from '@grafana/runtime';
 import { Alert, Button, CodeEditor, DeleteButton, LinkButton, Stack, Tab, TabContent, TabsBar } from '@grafana/ui';
 import {
   ResourceWrapper,
@@ -75,7 +74,8 @@ interface Props {
 function ResourceView({ wrap, repo, repoRef, tab, isReadOnlyRepo }: Props) {
   const isDashboard = wrap.resource?.type?.kind === 'Dashboard';
   const existingName = wrap.resource?.existing?.metadata?.name;
-  const location = useLocation();
+  const location = locationService.getLocation();
+  const navigate = useNavigate();
   const [queryParams] = useQueryParams();
   const [replaceFile, replaceFileStatus] = useReplaceRepositoryFilesWithPathMutation();
   const [deleteFile, deleteFileStatus] = useDeleteRepositoryFilesWithPathMutation();
@@ -141,14 +141,21 @@ function ResourceView({ wrap, repo, repoRef, tab, isReadOnlyRepo }: Props) {
       <br />
 
       <TabsBar>
-        {tabInfo.map((t) => (
-          <Tab
-            href={urlUtil.renderUrl(location.pathname, { ...queryParams, tab: t.value })}
-            key={t.value}
-            label={t.label}
-            active={tab === t.value}
-          />
-        ))}
+        {tabInfo.map((t) => {
+          const tabUrl = urlUtil.renderUrl(location.pathname, { ...queryParams, tab: t.value });
+          return (
+            <Tab
+              href={tabUrl}
+              key={t.value}
+              label={t.label}
+              active={tab === t.value}
+              onChangeTab={(e) => {
+                e.preventDefault();
+                navigate(tabUrl);
+              }}
+            />
+          );
+        })}
       </TabsBar>
       <TabContent>
         <div>

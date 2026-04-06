@@ -106,6 +106,9 @@ lineage: schemas: [{
 
 			// When set to true, the dashboard will load all panels in the dashboard when it's loaded.
 			preload?: bool
+
+			// When set to true, all rows will be collapsed when the dashboard loads.
+			collapseRowsOnLoad?: bool
 		} @cuetsy(kind="interface") @grafana(TSVeneer="type")
 
 		///////////////////////////////////////

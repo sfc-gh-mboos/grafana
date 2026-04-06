@@ -25,6 +25,8 @@ export interface DashboardV2Spec {
 	liveNow?: boolean;
 	// When set to true, the dashboard will load all panels in the dashboard when it's loaded.
 	preload: boolean;
+	// When set to true, all rows will be collapsed when the dashboard loads.
+	collapseRowsOnLoad: boolean;
 	// Plugins only. The version of the dashboard installed together with the plugin.
 	// This is used to determine if the dashboard should be updated when the plugin is updated.
 	revision?: number;
@@ -45,6 +47,7 @@ export const defaultDashboardV2Spec = (): DashboardV2Spec => ({
 	layout: defaultGridLayoutKind(),
 	links: [],
 	preload: false,
+	collapseRowsOnLoad: false,
 	tags: [],
 	timeSettings: defaultTimeSettingsSpec(),
 	title: "",
@@ -267,6 +270,7 @@ export interface QueryOptionsSpec {
 	interval?: string;
 	cacheTimeout?: string;
 	hideTimeOverride?: boolean;
+	timeCompare?: string;
 }
 
 export const defaultQueryOptionsSpec = (): QueryOptionsSpec => ({
@@ -327,7 +331,7 @@ export interface FieldConfig {
 	description?: string;
 	// An explicit path to the field in the datasource.  When the frame meta includes a path,
 	// This will default to `${frame.meta.path}/${field.name}
-	//
+	// 
 	// When defined, this value can be used as an identifier within the datasource scope, and
 	// may be used to update the results
 	path?: string;
@@ -760,7 +764,7 @@ export const defaultConditionalRenderingVariableKind = (): ConditionalRenderingV
 
 export interface ConditionalRenderingVariableSpec {
 	variable: string;
-	operator: "equals" | "notEquals";
+	operator: "equals" | "notEquals" | "matches" | "notMatches";
 	value: string;
 }
 

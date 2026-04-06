@@ -92,7 +92,7 @@ import { clearClipboard } from './layouts-shared/paste';
 import { DashboardLayoutManager } from './types/DashboardLayoutManager';
 import { LayoutParent } from './types/LayoutParent';
 
-export const PERSISTED_PROPS = ['title', 'description', 'tags', 'editable', 'graphTooltip', 'links', 'meta', 'preload'];
+export const PERSISTED_PROPS = ['title', 'description', 'tags', 'editable', 'graphTooltip', 'links', 'meta', 'preload', 'collapseRowsOnLoad'];
 export const PANEL_SEARCH_VAR = 'systemPanelFilterVar';
 export const PANELS_PER_ROW_VAR = 'systemDynamicRowSizeVar';
 
@@ -109,6 +109,8 @@ export interface DashboardSceneState extends SceneObjectState {
   editable?: boolean;
   /** Allows disabling grid lazy loading */
   preload?: boolean;
+  /** When true, all rows will be collapsed when the dashboard loads */
+  collapseRowsOnLoad?: boolean;
   /** A uid when saved */
   uid?: string;
   /** @experimental */

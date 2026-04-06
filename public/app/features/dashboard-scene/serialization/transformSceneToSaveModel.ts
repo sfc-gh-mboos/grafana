@@ -145,6 +145,7 @@ export function transformSceneToSaveModel(scene: DashboardScene, isSnapshot = fa
     id: state.id,
     editable: state.editable,
     preload: state.preload,
+    collapseRowsOnLoad: state.collapseRowsOnLoad,
     time: {
       from: timeRange.from,
       to: timeRange.to,

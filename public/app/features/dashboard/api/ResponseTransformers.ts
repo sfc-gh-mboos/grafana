@@ -185,6 +185,7 @@ export function ensureV2Response(
     tags: dashboard.tags ?? [],
     cursorSync: transformCursorSynctoEnum(dashboard.graphTooltip),
     preload: dashboard.preload || dashboardDefaults.preload,
+    collapseRowsOnLoad: dashboard.collapseRowsOnLoad || dashboardDefaults.collapseRowsOnLoad,
     // transformSceneToSaveModelSchemaV2.ts sets liveNow and editable to default values if they are not set
     // so we are matching that behavior here so conversion pipeline tests like ResponseTransformersToBackend.test.ts pass
     liveNow: dashboard.liveNow ?? Boolean(dashboardDefaults.liveNow),
@@ -1419,6 +1420,7 @@ export function transformDashboardV2SpecToV1(spec: DashboardV2Spec, metadata: Ob
     schemaVersion: 40,
     graphTooltip: transformCursorSyncV2ToV1(spec.cursorSync),
     preload: spec.preload,
+    collapseRowsOnLoad: spec.collapseRowsOnLoad,
     liveNow: spec.liveNow,
     editable: spec.editable,
     gnetId: metadata.annotations?.[AnnoKeyDashboardGnetId],

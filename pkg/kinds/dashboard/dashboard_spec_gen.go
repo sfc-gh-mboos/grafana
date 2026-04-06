@@ -77,6 +77,8 @@ type Spec struct {
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
 	// When set to true, the dashboard will load all panels in the dashboard when it's loaded.
 	Preload *bool `json:"preload,omitempty"`
+	// When set to true, all rows will be collapsed when the dashboard loads.
+	CollapseRowsOnLoad *bool `json:"collapseRowsOnLoad,omitempty"`
 }
 
 // NewSpec creates a new Spec object.

@@ -124,6 +124,37 @@ func TestIntegrationShortURLService(t *testing.T) {
 		newShortURL, err = service.CreateShortURL(ctx, user, cmd3)
 		require.ErrorIs(t, err, shorturls.ErrShortURLInvalidPath)
 		require.Nil(t, newShortURL)
+
+		past := time.Now().Add(-time.Minute).Unix()
+		cmd4 := &dtos.CreateShortURLCmd{
+			Path:      "path/test?test=true",
+			ExpiresAt: &past,
+		}
+		newShortURL, err = service.CreateShortURL(ctx, user, cmd4)
+		require.ErrorIs(t, err, shorturls.ErrShortURLBadRequest)
+		require.Nil(t, newShortURL)
+	})
+
+	t.Run("Expired short URLs are not resolved", func(t *testing.T) {
+		service := ShortURLService{SQLStore: &sqlStore{db: store}}
+		ctx := context.Background()
+
+		expiresSoon := time.Now().Add(time.Second).Unix()
+		cmd := &dtos.CreateShortURLCmd{
+			Path:      "mock/path?test=true",
+			ExpiresAt: &expiresSoon,
+		}
+
+		newShortURL, err := service.CreateShortURL(ctx, user, cmd)
+		require.NoError(t, err)
+		require.NotNil(t, newShortURL)
+
+		time.Sleep(1100 * time.Millisecond)
+
+		resolvedShortURL, err := service.GetShortURLByUID(ctx, user, newShortURL.Uid)
+		require.Error(t, err)
+		require.True(t, shorturls.ErrShortURLNotFound.Is(err))
+		require.Nil(t, resolvedShortURL)
 	})
 
 	t.Run("The same URL will generate different entries", func(t *testing.T) {

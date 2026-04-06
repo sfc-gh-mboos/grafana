@@ -1946,6 +1946,8 @@ type DashboardSpec struct {
 	LiveNow *bool `json:"liveNow,omitempty"`
 	// When set to true, the dashboard will load all panels in the dashboard when it's loaded.
 	Preload bool `json:"preload"`
+	// When set to true, all rows will be collapsed when the dashboard loads.
+	CollapseRowsOnLoad bool `json:"collapseRowsOnLoad"`
 	// Plugins only. The version of the dashboard installed together with the plugin.
 	// This is used to determine if the dashboard should be updated when the plugin is updated.
 	Revision *uint16 `json:"revision,omitempty"`
@@ -1961,16 +1963,17 @@ type DashboardSpec struct {
 // NewDashboardSpec creates a new DashboardSpec object.
 func NewDashboardSpec() *DashboardSpec {
 	return &DashboardSpec{
-		Annotations:  []DashboardAnnotationQueryKind{},
-		CursorSync:   DashboardDashboardCursorSyncOff,
-		Editable:     (func(input bool) *bool { return &input })(true),
-		Elements:     map[string]DashboardElement{},
-		Layout:       *NewDashboardGridLayoutKindOrRowsLayoutKindOrAutoGridLayoutKindOrTabsLayoutKind(),
-		Links:        []DashboardDashboardLink{},
-		Preload:      false,
-		Tags:         []string{},
-		TimeSettings: *NewDashboardTimeSettingsSpec(),
-		Variables:    []DashboardVariableKind{},
+		Annotations:        []DashboardAnnotationQueryKind{},
+		CursorSync:         DashboardDashboardCursorSyncOff,
+		Editable:           (func(input bool) *bool { return &input })(true),
+		Elements:           map[string]DashboardElement{},
+		Layout:             *NewDashboardGridLayoutKindOrRowsLayoutKindOrAutoGridLayoutKindOrTabsLayoutKind(),
+		Links:              []DashboardDashboardLink{},
+		Preload:            false,
+		CollapseRowsOnLoad: false,
+		Tags:               []string{},
+		TimeSettings:       *NewDashboardTimeSettingsSpec(),
+		Variables:          []DashboardVariableKind{},
 	}
 }
 

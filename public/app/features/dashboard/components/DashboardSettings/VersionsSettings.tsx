@@ -1,7 +1,8 @@
 import { PureComponent } from 'react';
 import * as React from 'react';
 
-import { Spinner, Stack } from '@grafana/ui';
+import { Alert, Button, Spinner, Stack } from '@grafana/ui';
+import { getMessageFromError } from 'app/core/utils/errors';
 import { Page } from 'app/core/components/Page/Page';
 import { historySrv, RevisionsModel } from 'app/features/dashboard-scene/settings/version-history/HistorySrv';
 import { VersionsHistoryButtons } from 'app/features/dashboard-scene/settings/version-history/VersionHistoryButtons';
@@ -23,6 +24,7 @@ type State = {
   newInfo?: DecoratedRevisionModel;
   baseInfo?: DecoratedRevisionModel;
   isNewLatest: boolean;
+  errorMessage?: string;
 };
 
 export type DecoratedRevisionModel = RevisionsModel & {
@@ -60,7 +62,11 @@ export class VersionsSettings extends PureComponent<Props, State> {
   }
 
   getVersions = (append = false) => {
-    this.setState({ isAppending: append });
+    this.setState({
+      errorMessage: undefined,
+      isAppending: append,
+      ...(append ? {} : { isLoading: true }),
+    });
     const requestOptions = this.continueToken
       ? { limit: this.limit, start: this.start, continueToken: this.continueToken }
       : { limit: this.limit, start: this.start };
@@ -68,16 +74,26 @@ export class VersionsSettings extends PureComponent<Props, State> {
     historySrv
       .getHistoryList(this.props.dashboard.uid, requestOptions)
       .then((res) => {
-        this.setState({
+        this.setState((prevState) => ({
+          errorMessage: undefined,
           isLoading: false,
-          versions: [...(this.state.versions ?? []), ...this.decorateVersions(res.versions)],
-        });
+          versions: [...(prevState.versions ?? []), ...this.decorateVersions(res.versions)],
+        }));
         this.start += this.limit;
         // Update the continueToken for the next request, if available
         this.continueToken = res.continueToken ?? '';
       })
-      .catch((err) => console.log(err))
+      .catch((err) =>
+        this.setState({
+          errorMessage: getMessageFromError(err),
+          isLoading: false,
+        })
+      )
       .finally(() => this.setState({ isAppending: false }));
+  };
+
+  onRetry = () => {
+    this.getVersions(this.state.versions.length > 0);
   };
 
   getDiff = async () => {
@@ -140,17 +156,19 @@ export class VersionsSettings extends PureComponent<Props, State> {
       },
       isNewLatest: false,
       newInfo: undefined,
+      errorMessage: undefined,
       versions: this.state.versions.map((version) => ({ ...version, checked: false })),
       viewMode: 'list',
     });
   };
 
   render() {
-    const { versions, viewMode, baseInfo, newInfo, isNewLatest, isLoading, diffData } = this.state;
+    const { versions, viewMode, baseInfo, newInfo, isNewLatest, isLoading, diffData, errorMessage } = this.state;
     const canCompare = versions.filter((version) => version.checked).length === 2;
     const showButtons = versions.length > 1;
     const hasMore = versions.length >= this.limit;
     const pageNav = this.props.sectionNav.node.parentItem;
+    const hasNoHistoryEntries = versions.length === 0;
 
     if (viewMode === 'compare') {
       return (
@@ -179,8 +197,24 @@ export class VersionsSettings extends PureComponent<Props, State> {
       <Page navModel={this.props.sectionNav} pageNav={pageNav}>
         {isLoading ? (
           <VersionsHistorySpinner msg="Fetching history list&hellip;" />
+        ) : hasNoHistoryEntries && errorMessage ? (
+          <Stack direction="column" gap={2}>
+            <Alert severity="error" title="Failed to load version history">
+              {errorMessage}
+            </Alert>
+            <Button variant="secondary" onClick={this.onRetry}>
+              Retry
+            </Button>
+          </Stack>
         ) : (
-          <VersionHistoryTable versions={versions} onCheck={this.onCheck} canCompare={canCompare} />
+          <>
+            {errorMessage && (
+              <Alert severity="error" title="Could not load all version history entries">
+                {errorMessage}
+              </Alert>
+            )}
+            <VersionHistoryTable versions={versions} onCheck={this.onCheck} canCompare={canCompare} />
+          </>
         )}
         {this.state.isAppending && <VersionsHistorySpinner msg="Fetching more entries&hellip;" />}
         {showButtons && (

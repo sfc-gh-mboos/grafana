@@ -6,6 +6,8 @@ import { getTrackingSource } from 'app/features/dashboard/components/ShareModal/
 import { DashboardScene } from '../../scene/DashboardScene';
 import { DashboardInteractions } from '../../utils/interactions';
 
+export type ShareDashboardLinkExpiration = '1h' | '24h' | '7d' | 'never';
+
 export type ShareLinkConfiguration = {
   useAbsoluteTimeRange: boolean;
   useShortUrl: boolean;
@@ -18,7 +20,26 @@ const DEFAULT_SHARE_LINK_CONFIGURATION: ShareLinkConfiguration = {
   theme: 'current',
 };
 
-export const buildShareUrl = async (dashboard: DashboardScene, panel?: VizPanel) => {
+export function getShareExpirationTimestamp(option: ShareDashboardLinkExpiration): number | undefined {
+  const now = Date.now();
+
+  switch (option) {
+    case '1h':
+      return Math.floor((now + 60 * 60 * 1000) / 1000);
+    case '24h':
+      return Math.floor((now + 24 * 60 * 60 * 1000) / 1000);
+    case '7d':
+      return Math.floor((now + 7 * 24 * 60 * 60 * 1000) / 1000);
+    case 'never':
+      return undefined;
+  }
+}
+
+export const buildShareUrl = async (
+  dashboard: DashboardScene,
+  panel?: VizPanel,
+  expiration?: ShareDashboardLinkExpiration
+) => {
   const { useAbsoluteTimeRange, useShortUrl, theme } = getShareLinkConfiguration();
   DashboardInteractions.shareLinkCopied({
     currentTimeRange: useAbsoluteTimeRange,
@@ -30,7 +51,7 @@ export const buildShareUrl = async (dashboard: DashboardScene, panel?: VizPanel)
     useAbsoluteTimeRange,
     theme,
     useShortUrl,
-  });
+  }, panel, { expiresAt: expiration ? getShareExpirationTimestamp(expiration) : undefined });
 };
 
 const SHARE_LINK_CONFIGURATION = 'grafana.dashboard.link.shareConfiguration';

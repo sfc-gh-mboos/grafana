@@ -1,29 +1,28 @@
 import { css } from '@emotion/css';
-import { useCallback, useState } from 'react';
-import { useAsyncFn } from 'react-use';
+import { useCallback, useContext, useState } from 'react';
 
 import { GrafanaTheme2 } from '@grafana/data';
 import { selectors as e2eSelectors } from '@grafana/e2e-selectors';
 import { Trans, t } from '@grafana/i18n';
 import { VizPanel } from '@grafana/scenes';
-import { Button, ButtonGroup, Dropdown, useStyles2 } from '@grafana/ui';
+import { Button, ButtonGroup, Dropdown, ModalsContext, useStyles2 } from '@grafana/ui';
 
 import { DashboardScene } from '../../scene/DashboardScene';
 import { DashboardInteractions } from '../../utils/interactions';
 
+import { CopyDashboardLinkModal } from './CopyDashboardLinkModal';
 import ShareMenu from './ShareMenu';
-import { buildShareUrl } from './utils';
 
 const newShareButtonSelector = e2eSelectors.pages.Dashboard.DashNav.newShareButton;
 
 export default function ShareButton({ dashboard, panel }: { dashboard: DashboardScene; panel?: VizPanel }) {
   const styles = useStyles2(getStyles);
+  const { showModal, hideModal } = useContext(ModalsContext);
   const [isOpen, setIsOpen] = useState(false);
-
-  const [_, buildUrl] = useAsyncFn(async () => {
+  const openCopyLinkModal = useCallback(() => {
     DashboardInteractions.toolbarShareClick();
-    await buildShareUrl(dashboard, panel);
-  }, [dashboard, panel]);
+    showModal(CopyDashboardLinkModal, { dashboard, panel, onDismiss: hideModal });
+  }, [dashboard, hideModal, panel, showModal]);
 
   const onMenuClick = useCallback((isOpen: boolean) => {
     if (isOpen) {
@@ -33,7 +32,7 @@ export default function ShareButton({ dashboard, panel }: { dashboard: Dashboard
     setIsOpen(isOpen);
   }, []);
 
-  const MenuActions = () => <ShareMenu dashboard={dashboard} />;
+  const MenuActions = () => <ShareMenu dashboard={dashboard} panel={panel} />;
 
   return (
     <ButtonGroup data-testid={newShareButtonSelector.container} className={styles.container}>
@@ -41,7 +40,7 @@ export default function ShareButton({ dashboard, panel }: { dashboard: Dashboard
         data-testid={newShareButtonSelector.shareLink}
         size="sm"
         tooltip={t('share-dashboard.share-button-tooltip', 'Copy link')}
-        onClick={buildUrl}
+        onClick={openCopyLinkModal}
       >
         <Trans i18nKey="share-dashboard.share-button">Share</Trans>
       </Button>

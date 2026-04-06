@@ -2,6 +2,7 @@ package shorturl
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,11 +43,18 @@ func convertToK8sResource(v *shorturls.ShortUrl, namespacer request.NamespaceMap
 }
 
 func LegacyCreateCommandToUnstructured(cmd dtos.CreateShortURLCmd) unstructured.Unstructured {
+	metadata := map[string]interface{}{
+		"name": cmd.UID,
+	}
+	if cmd.ExpiresAt != nil {
+		metadata["annotations"] = map[string]interface{}{
+			"grafana.app/expires-at": strconv.FormatInt(*cmd.ExpiresAt, 10),
+		}
+	}
+
 	obj := unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"name": cmd.UID,
-			},
+			"metadata": metadata,
 			"spec": map[string]interface{}{
 				"path": cmd.Path,
 			},

@@ -79,7 +79,7 @@ import { transformV2ToV1AnnotationQuery } from './annotations';
 import { SnapshotVariable } from './custom-variables/SnapshotVariable';
 import { layoutDeserializerRegistry } from './layoutSerializers/layoutSerializerRegistry';
 import { getDataSourceForQuery, getRuntimeVariableDataSource } from './layoutSerializers/utils';
-import { registerPanelInteractionsReporter } from './transformSaveModelToScene';
+import { applyCollapseRowsOnLoadIfNeeded, registerPanelInteractionsReporter } from './transformSaveModelToScene';
 import {
   transformCursorSyncV2ToV1,
   transformSortVariableToEnumV1,
@@ -206,6 +206,7 @@ export function transformSaveModelSchemaV2ToScene(dto: DashboardWithAccessInfo<D
       description: dashboard.description,
       editable: dashboard.editable,
       preload: dashboard.preload,
+      collapseRowsOnLoad: dashboard.collapseRowsOnLoad,
       id: dashboardId,
       isDirty: false,
       links: dashboard.links,
@@ -265,6 +266,9 @@ export function transformSaveModelSchemaV2ToScene(dto: DashboardWithAccessInfo<D
 
   // Enable panel profiling for this dashboard using the composed SceneRenderProfiler
   enablePanelProfilingForDashboard(dashboardScene, metadata.name);
+
+  // Collapse rows if dashboard setting is enabled
+  applyCollapseRowsOnLoadIfNeeded(dashboardScene);
 
   return dashboardScene;
 }

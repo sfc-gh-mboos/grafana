@@ -137,6 +137,7 @@ func convertDashboardSpec_V1beta1_to_V2alpha1(in *dashv1.DashboardSpec, out *das
 	out.Tags = getStringSlice(dashboard, "tags")
 	out.CursorSync = transformCursorSyncToEnum(getIntField(dashboard, "graphTooltip", 0))
 	out.Preload = getBoolField(dashboard, "preload", dashboardDefaults.Preload)
+	out.CollapseRowsOnLoad = getBoolField(dashboard, "collapseRowsOnLoad", dashboardDefaults.CollapseRowsOnLoad)
 
 	// Add frontend-style default values
 	// Set default editable: true to match frontend behavior
@@ -315,7 +316,8 @@ func transformCursorSyncToEnum(cursorSync int) dashv2alpha1.DashboardDashboardCu
 
 func getDefaultDashboardV2Spec() dashv2alpha1.DashboardSpec {
 	return dashv2alpha1.DashboardSpec{
-		Preload: false,
+		Preload:            false,
+		CollapseRowsOnLoad: false,
 	}
 }
 

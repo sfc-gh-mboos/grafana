@@ -1189,6 +1189,10 @@ export interface Dashboard {
    */
   annotations?: AnnotationContainer;
   /**
+   * When set to true, all rows will be collapsed when the dashboard loads.
+   */
+  collapseRowsOnLoad?: boolean;
+  /**
    * Description of dashboard.
    */
   description?: string;
