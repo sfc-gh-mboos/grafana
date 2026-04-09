@@ -5,7 +5,7 @@ import { isEmptyObject, SelectableValue, VariableRefresh } from '@grafana/data';
 import { selectors as e2eSelectors } from '@grafana/e2e-selectors';
 import { Trans, t } from '@grafana/i18n';
 import { getBackendSrv } from '@grafana/runtime';
-import { Button, ClipboardButton, Field, Input, LinkButton, Modal, Select, Spinner, Stack } from '@grafana/ui';
+import { Alert, Button, ClipboardButton, Field, Input, LinkButton, Modal, Select, Spinner, Stack } from '@grafana/ui';
 import { getTimeSrv } from 'app/features/dashboard/services/TimeSrv';
 import { DashboardModel } from 'app/features/dashboard/state/DashboardModel';
 import { PanelModel } from 'app/features/dashboard/state/PanelModel';
@@ -29,6 +29,7 @@ interface State {
   timeoutSeconds: number;
   externalEnabled: boolean;
   sharingButtonText: string;
+  error: string | null;
 }
 
 const selectors = e2eSelectors.pages.ShareDashboardModal.SnapshotScene;
@@ -69,6 +70,7 @@ export class ShareSnapshot extends PureComponent<Props, State> {
       deleteUrl: '',
       externalEnabled: false,
       sharingButtonText: '',
+      error: null,
     };
   }
 
@@ -112,11 +114,17 @@ export class ShareSnapshot extends PureComponent<Props, State> {
     };
 
     try {
+      this.setState({ error: null });
       const results = await getDashboardSnapshotSrv().create(cmdData);
       this.setState({
         deleteUrl: results.deleteUrl,
         snapshotUrl: results.url,
         step: 2,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      this.setState({
+        error: t('share-modal.snapshot.save-error', 'Failed to create snapshot: {{errorMessage}}', { errorMessage }),
       });
     } finally {
       if (external) {
@@ -205,8 +213,16 @@ export class ShareSnapshot extends PureComponent<Props, State> {
 
   deleteSnapshot = async () => {
     const { deleteUrl } = this.state;
-    await getBackendSrv().get(deleteUrl);
-    this.setState({ step: 3 });
+    try {
+      this.setState({ error: null });
+      await getBackendSrv().get(deleteUrl);
+      this.setState({ step: 3 });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      this.setState({
+        error: t('share-modal.snapshot.delete-error', 'Failed to delete snapshot: {{errorMessage}}', { errorMessage }),
+      });
+    }
   };
 
   getSnapshotUrl = () => {
@@ -342,10 +358,19 @@ export class ShareSnapshot extends PureComponent<Props, State> {
   }
 
   render() {
-    const { isLoading, step } = this.state;
+    const { isLoading, step, error } = this.state;
 
     return (
       <>
+        {error && (
+          <Alert
+            title={t('share-modal.snapshot.error-title', 'Snapshot error')}
+            severity="error"
+            onRemove={() => this.setState({ error: null })}
+          >
+            {error}
+          </Alert>
+        )}
         {step === 1 && this.renderStep1()}
         {step === 2 && this.renderStep2()}
         {step === 3 && this.renderStep3()}

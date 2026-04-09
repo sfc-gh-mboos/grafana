@@ -245,4 +245,43 @@ describe('VersionSettings', () => {
 
     await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument());
   });
+
+  test('shows error alert when fetching history list fails', async () => {
+    const errorMessage = 'Network error';
+    historySrv.getHistoryList = jest.fn().mockRejectedValue(new Error(errorMessage));
+
+    setup();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Version history error/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Failed to fetch version history/i)).toBeInTheDocument();
+  });
+
+  test('shows error alert when comparing versions fails', async () => {
+    const errorMessage = 'Failed to get version';
+    historySrv.getHistoryList = jest.fn().mockResolvedValue({
+      continueToken: versions.continueToken,
+      versions: versions.versions.slice(0, VERSIONS_FETCH_LIMIT),
+    });
+    historySrv.getDashboardVersion = jest.fn().mockRejectedValue(new Error(errorMessage));
+
+    setup();
+
+    await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument());
+
+    const compareButton = screen.getByRole('button', { name: /compare versions/i });
+    const tableBody = screen.getAllByRole('rowgroup')[1];
+    await user.click(within(tableBody).getAllByRole('checkbox')[0]);
+    await user.click(within(tableBody).getAllByRole('checkbox')[VERSIONS_FETCH_LIMIT - 1]);
+
+    await user.click(compareButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Version history error/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Failed to compare versions/i)).toBeInTheDocument();
+  });
 });

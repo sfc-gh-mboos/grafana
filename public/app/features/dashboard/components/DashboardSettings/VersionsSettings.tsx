@@ -1,7 +1,8 @@
 import { PureComponent } from 'react';
 import * as React from 'react';
 
-import { Spinner, Stack } from '@grafana/ui';
+import { t } from '@grafana/i18n';
+import { Alert, Spinner, Stack } from '@grafana/ui';
 import { Page } from 'app/core/components/Page/Page';
 import { historySrv, RevisionsModel } from 'app/features/dashboard-scene/settings/version-history/HistorySrv';
 import { VersionsHistoryButtons } from 'app/features/dashboard-scene/settings/version-history/VersionHistoryButtons';
@@ -23,6 +24,7 @@ type State = {
   newInfo?: DecoratedRevisionModel;
   baseInfo?: DecoratedRevisionModel;
   isNewLatest: boolean;
+  error: string | null;
 };
 
 export type DecoratedRevisionModel = RevisionsModel & {
@@ -52,6 +54,7 @@ export class VersionsSettings extends PureComponent<Props, State> {
         lhs: '',
         rhs: '',
       },
+      error: null,
     };
   }
 
@@ -60,7 +63,7 @@ export class VersionsSettings extends PureComponent<Props, State> {
   }
 
   getVersions = (append = false) => {
-    this.setState({ isAppending: append });
+    this.setState({ isAppending: append, error: null });
     const requestOptions = this.continueToken
       ? { limit: this.limit, start: this.start, continueToken: this.continueToken }
       : { limit: this.limit, start: this.start };
@@ -73,10 +76,17 @@ export class VersionsSettings extends PureComponent<Props, State> {
           versions: [...(this.state.versions ?? []), ...this.decorateVersions(res.versions)],
         });
         this.start += this.limit;
-        // Update the continueToken for the next request, if available
         this.continueToken = res.continueToken ?? '';
       })
-      .catch((err) => console.log(err))
+      .catch((err) => {
+        const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+        this.setState({
+          isLoading: false,
+          error: t('dashboard-settings.versions.fetch-error', 'Failed to fetch version history: {{errorMessage}}', {
+            errorMessage,
+          }),
+        });
+      })
       .finally(() => this.setState({ isAppending: false }));
   };
 
@@ -87,23 +97,33 @@ export class VersionsSettings extends PureComponent<Props, State> {
 
     this.setState({
       isLoading: true,
+      error: null,
     });
 
-    // the id here is the resource version in k8s, use this instead to get the specific version
-    let lhs = await historySrv.getDashboardVersion(this.props.dashboard.uid, baseInfo.id);
-    let rhs = await historySrv.getDashboardVersion(this.props.dashboard.uid, newInfo.id);
+    try {
+      const lhs = await historySrv.getDashboardVersion(this.props.dashboard.uid, baseInfo.id);
+      const rhs = await historySrv.getDashboardVersion(this.props.dashboard.uid, newInfo.id);
 
-    this.setState({
-      baseInfo,
-      isLoading: false,
-      isNewLatest,
-      newInfo,
-      viewMode: 'compare',
-      diffData: {
-        lhs: lhs.data,
-        rhs: rhs.data,
-      },
-    });
+      this.setState({
+        baseInfo,
+        isLoading: false,
+        isNewLatest,
+        newInfo,
+        viewMode: 'compare',
+        diffData: {
+          lhs: lhs.data,
+          rhs: rhs.data,
+        },
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      this.setState({
+        isLoading: false,
+        error: t('dashboard-settings.versions.compare-error', 'Failed to compare versions: {{errorMessage}}', {
+          errorMessage,
+        }),
+      });
+    }
   };
 
   decorateVersions = (versions: RevisionsModel[]) =>
@@ -146,7 +166,7 @@ export class VersionsSettings extends PureComponent<Props, State> {
   };
 
   render() {
-    const { versions, viewMode, baseInfo, newInfo, isNewLatest, isLoading, diffData } = this.state;
+    const { versions, viewMode, baseInfo, newInfo, isNewLatest, isLoading, diffData, error } = this.state;
     const canCompare = versions.filter((version) => version.checked).length === 2;
     const showButtons = versions.length > 1;
     const hasMore = versions.length >= this.limit;
@@ -161,6 +181,15 @@ export class VersionsSettings extends PureComponent<Props, State> {
             newVersion={newInfo?.version}
             isNewLatest={isNewLatest}
           />
+          {error && (
+            <Alert
+              title={t('dashboard-settings.versions.error-title', 'Version history error')}
+              severity="error"
+              onRemove={() => this.setState({ error: null })}
+            >
+              {error}
+            </Alert>
+          )}
           {isLoading ? (
             <VersionsHistorySpinner msg="Fetching changes&hellip;" />
           ) : (
@@ -177,6 +206,15 @@ export class VersionsSettings extends PureComponent<Props, State> {
 
     return (
       <Page navModel={this.props.sectionNav} pageNav={pageNav}>
+        {error && (
+          <Alert
+            title={t('dashboard-settings.versions.error-title', 'Version history error')}
+            severity="error"
+            onRemove={() => this.setState({ error: null })}
+          >
+            {error}
+          </Alert>
+        )}
         {isLoading ? (
           <VersionsHistorySpinner msg="Fetching history list&hellip;" />
         ) : (

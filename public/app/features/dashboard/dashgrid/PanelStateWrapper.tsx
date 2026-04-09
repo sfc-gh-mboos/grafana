@@ -33,6 +33,7 @@ import {
   SeriesVisibilityChangeMode,
   AdHocFilterItem,
 } from '@grafana/ui';
+import { AppEvents } from '@grafana/data';
 import { appEvents } from 'app/core/app_events';
 import { profiler } from 'app/core/profiler';
 import { annotationServer } from 'app/features/annotations/api';
@@ -421,15 +422,25 @@ export class PanelStateWrapper extends PureComponent<Props, State> {
       tags: event.tags,
       text: event.description,
     };
-    await annotationServer().save(anno);
-    getDashboardQueryRunner().run({ dashboard: this.props.dashboard, range: this.timeSrv.timeRange() });
-    this.state.context.eventBus.publish(new AnnotationChangeEvent(anno));
+    try {
+      await annotationServer().save(anno);
+      getDashboardQueryRunner().run({ dashboard: this.props.dashboard, range: this.timeSrv.timeRange() });
+      this.state.context.eventBus.publish(new AnnotationChangeEvent(anno));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      appEvents.emit(AppEvents.alertError, ['Failed to create annotation', errorMessage]);
+    }
   };
 
   onAnnotationDelete = async (id: string) => {
-    await annotationServer().delete({ id });
-    getDashboardQueryRunner().run({ dashboard: this.props.dashboard, range: this.timeSrv.timeRange() });
-    this.state.context.eventBus.publish(new AnnotationChangeEvent({ id }));
+    try {
+      await annotationServer().delete({ id });
+      getDashboardQueryRunner().run({ dashboard: this.props.dashboard, range: this.timeSrv.timeRange() });
+      this.state.context.eventBus.publish(new AnnotationChangeEvent({ id }));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      appEvents.emit(AppEvents.alertError, ['Failed to delete annotation', errorMessage]);
+    }
   };
 
   onAnnotationUpdate = async (event: AnnotationEventUIModel) => {
@@ -444,10 +455,14 @@ export class PanelStateWrapper extends PureComponent<Props, State> {
       tags: event.tags,
       text: event.description,
     };
-    await annotationServer().update(anno);
-
-    getDashboardQueryRunner().run({ dashboard: this.props.dashboard, range: this.timeSrv.timeRange() });
-    this.state.context.eventBus.publish(new AnnotationChangeEvent(anno));
+    try {
+      await annotationServer().update(anno);
+      getDashboardQueryRunner().run({ dashboard: this.props.dashboard, range: this.timeSrv.timeRange() });
+      this.state.context.eventBus.publish(new AnnotationChangeEvent(anno));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      appEvents.emit(AppEvents.alertError, ['Failed to update annotation', errorMessage]);
+    }
   };
 
   get hasPanelSnapshot() {

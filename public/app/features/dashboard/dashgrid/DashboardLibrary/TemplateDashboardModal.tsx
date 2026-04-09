@@ -1,12 +1,12 @@
 import { css } from '@emotion/css';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom-v5-compat';
-import { useAsync } from 'react-use';
+import { useAsyncRetry } from 'react-use';
 
 import { GrafanaTheme2 } from '@grafana/data';
 import { t, Trans } from '@grafana/i18n';
 import { getBackendSrv, getDataSourceSrv, locationService } from '@grafana/runtime';
-import { Box, Grid, Modal, Text, useStyles2 } from '@grafana/ui';
+import { Alert, Box, Button, Grid, Modal, Stack, Text, useStyles2 } from '@grafana/ui';
 
 import { DASHBOARD_LIBRARY_ROUTES } from '../types';
 
@@ -70,26 +70,26 @@ export const TemplateDashboardModal = () => {
     locationService.push(templateUrl);
   };
 
-  const { value: dashboards = [], loading } = useAsync(async () => {
+  const {
+    value: dashboards = [],
+    loading,
+    error,
+    retry,
+  } = useAsyncRetry(async () => {
     if (!isOpen) {
       return [];
     }
 
-    try {
-      const response = await getBackendSrv().get<GnetDashboardsResponse>(
-        `/api/gnet/dashboards?orgSlug=raintank&categorySlug=templates&includeScreenshots=true`,
-        undefined,
-        undefined,
-        {
-          showErrorAlert: false,
-        }
-      );
+    const response = await getBackendSrv().get<GnetDashboardsResponse>(
+      `/api/gnet/dashboards?orgSlug=raintank&categorySlug=templates&includeScreenshots=true`,
+      undefined,
+      undefined,
+      {
+        showErrorAlert: false,
+      }
+    );
 
-      return response.items;
-    } catch (error) {
-      console.error('Error loading template dashboards ', error);
-      return [];
-    }
+    return response.items;
   }, [isOpen]);
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export const TemplateDashboardModal = () => {
     }
   }, [isOpen, dashboards, entryPoint, testDataSource?.type, loading]);
 
-  if (!testDataSource || (dashboards.length === 0 && !loading)) {
+  if (!testDataSource || (dashboards.length === 0 && !loading && !error)) {
     return null;
   }
 
@@ -123,6 +123,21 @@ export const TemplateDashboardModal = () => {
           </Trans>
         </Text>
       </div>
+      {error && (
+        <Stack direction="column" alignItems="center" gap={2}>
+          <Alert
+            title={t('dashboard-library.template-error-title', 'Error loading template dashboards')}
+            severity="error"
+          >
+            <Trans i18nKey="dashboard-library.template-error">
+              Failed to load template dashboards. Please try again.
+            </Trans>
+          </Alert>
+          <Button variant="secondary" onClick={retry}>
+            <Trans i18nKey="dashboard-library.retry">Retry</Trans>
+          </Button>
+        </Stack>
+      )}
       <Box direction="column" gap={4} display="flex">
         <Grid
           gap={4}
