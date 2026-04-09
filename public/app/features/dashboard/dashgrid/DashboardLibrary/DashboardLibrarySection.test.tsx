@@ -72,6 +72,11 @@ const mockDashboardLibraryInteractionsItemClicked = DashboardLibraryInteractions
 describe('DashboardLibrarySection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should render dashboards when they are available', async () => {
@@ -269,5 +274,22 @@ describe('DashboardLibrarySection', () => {
         discoveryMethod: 'browse',
       });
     });
+  });
+
+  it('should show error state when fetching dashboards fails', async () => {
+    mockFetchProvisionedDashboards.mockRejectedValue(new Error('Failed to fetch'));
+
+    render(<DashboardLibrarySection />, {
+      historyOptions: {
+        initialEntries: ['/test?dashboardLibraryDatasourceUid=test-uid'],
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Error loading provisioned dashboards')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Failed to load provisioned dashboards. Please try again.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 });

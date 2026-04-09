@@ -1,14 +1,15 @@
 import { css, cx } from '@emotion/css';
-import { forwardRef } from 'react';
-import { useAsync } from 'react-use';
+import { forwardRef, useEffect } from 'react';
+import { useAsyncRetry } from 'react-use';
 
 import { GrafanaTheme2, ScopedVars } from '@grafana/data';
 import { sanitize, sanitizeUrl } from '@grafana/data/internal';
 import { selectors } from '@grafana/e2e-selectors';
 import { t } from '@grafana/i18n';
 import { DashboardLink } from '@grafana/schema';
-import { Dropdown, Icon, LinkButton, Button, Menu, ScrollContainer, useStyles2 } from '@grafana/ui';
+import { Dropdown, Icon, LinkButton, Button, Menu, ScrollContainer, useStyles2, Tooltip } from '@grafana/ui';
 import { ButtonLinkProps } from '@grafana/ui/internal';
+import { useAppNotification } from 'app/core/copy/appNotification';
 import { getGrafanaSearcher } from 'app/features/search/service/searcher';
 import { DashboardQueryResult } from 'app/features/search/service/types';
 
@@ -28,7 +29,27 @@ interface DashboardLinksMenuProps {
 
 function DashboardLinksMenu({ dashboardUID, link }: DashboardLinksMenuProps) {
   const styles = useStyles2(getStyles);
-  const resolvedLinks = useResolvedLinks({ dashboardUID, link });
+  const { links: resolvedLinks, error, loading, retry } = useResolvedLinks({ dashboardUID, link });
+
+  if (loading) {
+    return (
+      <Menu>
+        <Menu.Item disabled label={t('dashboard.dashboard-links-menu.loading', 'Loading...')} />
+      </Menu>
+    );
+  }
+
+  if (error) {
+    return (
+      <Menu>
+        <Menu.Item
+          icon="exclamation-triangle"
+          label={t('dashboard.dashboard-links-menu.error', 'Failed to load links')}
+          onClick={retry}
+        />
+      </Menu>
+    );
+  }
 
   if (!resolvedLinks || resolvedLinks.length === 0) {
     return (
@@ -69,7 +90,7 @@ function DashboardLinksMenu({ dashboardUID, link }: DashboardLinksMenuProps) {
 
 export const DashboardLinksDashboard = ({ link, linkInfo, dashboardUID }: Props) => {
   const { title } = linkInfo;
-  const resolvedLinks = useResolvedLinks({ link, dashboardUID });
+  const { links: resolvedLinks, error, loading, retry } = useResolvedLinks({ link, dashboardUID });
   const styles = useStyles2(getStyles);
 
   if (link.asDropdown) {
@@ -89,6 +110,24 @@ export const DashboardLinksDashboard = ({ link, linkInfo, dashboardUID }: Props)
             <span>{title}</span>
           </DashboardLinkButton>
         </Dropdown>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.linkContainer}>
+        <Tooltip content={t('dashboard.dashboard-links.retry-tooltip', 'Click to retry loading dashboard links')}>
+          <DashboardLinkButton
+            icon="exclamation-triangle"
+            variant="secondary"
+            fill="outline"
+            onClick={retry}
+            data-testid={selectors.components.DashboardLinks.link}
+          >
+            {t('dashboard.dashboard-links.error-button', 'Error loading links')}
+          </DashboardLinkButton>
+        </Tooltip>
       </div>
     );
   }
@@ -117,13 +156,36 @@ export const DashboardLinksDashboard = ({ link, linkInfo, dashboardUID }: Props)
   );
 };
 
-const useResolvedLinks = ({ link, dashboardUID }: Pick<Props, 'link' | 'dashboardUID'>): ResolvedLinkDTO[] => {
+interface UseResolvedLinksResult {
+  links: ResolvedLinkDTO[];
+  error: Error | undefined;
+  loading: boolean;
+  retry: () => void;
+}
+
+const useResolvedLinks = ({ link, dashboardUID }: Pick<Props, 'link' | 'dashboardUID'>): UseResolvedLinksResult => {
   const { tags } = link;
-  const result = useAsync(() => searchForTags(tags), [tags]);
+  const notifyApp = useAppNotification();
+  const result = useAsyncRetry(() => searchForTags(tags), [tags]);
+
+  useEffect(() => {
+    if (result.error) {
+      notifyApp.error(
+        t('dashboard.dashboard-links.error-title', 'Failed to load dashboard links'),
+        result.error.message
+      );
+    }
+  }, [result.error, notifyApp]);
+
   if (!result.value) {
-    return [];
+    return { links: [], error: result.error, loading: result.loading, retry: result.retry };
   }
-  return resolveLinks(dashboardUID, link, result.value.view);
+  return {
+    links: resolveLinks(dashboardUID, link, result.value.view),
+    error: result.error,
+    loading: result.loading,
+    retry: result.retry,
+  };
 };
 
 interface ResolvedLinkDTO {

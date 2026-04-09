@@ -11,7 +11,6 @@ import { dashboardWatcher } from '../../../live/dashboard/dashboardWatcher';
 import { DashboardModel } from '../../state/DashboardModel';
 
 const restoreDashboard = async (version: number, dashboard: DashboardModel) => {
-  // Skip the watcher logic for this save since it's handled by the hook
   dashboardWatcher.ignoreNextSave();
   return await historySrv.restoreDashboard(dashboard.uid, version);
 };
@@ -34,5 +33,13 @@ export const useDashboardRestore = (id: number, version: number) => {
       notifyApp.success('Dashboard restored', `Restored from version ${version}`);
     }
   }, [state, version, notifyApp]);
+
+  useEffect(() => {
+    if (state.error) {
+      const errorMessage = state.error instanceof Error ? state.error.message : 'An unexpected error occurred';
+      notifyApp.error('Failed to restore dashboard', errorMessage);
+    }
+  }, [state.error, notifyApp]);
+
   return { state, onRestoreDashboard };
 };
