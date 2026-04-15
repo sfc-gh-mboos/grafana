@@ -60,16 +60,9 @@ export const CommunityDashboardSection = ({ onShowMapping, datasourceType }: Pro
     error,
     retry,
   } = useAsyncRetry(async () => {
-    if (!datasourceUid) {
-      return null;
-    }
-
-    const ds = getDataSourceSrv().getInstanceSettings(datasourceUid);
-    if (!ds) {
-      return null;
-    }
-
     try {
+      const ds = datasourceUid ? getDataSourceSrv().getInstanceSettings(datasourceUid) : null;
+      
       const apiResponse = await fetchCommunityDashboards({
         orderBy: DEFAULT_SORT_ORDER,
         direction: DEFAULT_SORT_DIRECTION,
@@ -77,14 +70,14 @@ export const CommunityDashboardSection = ({ onShowMapping, datasourceType }: Pro
         pageSize: COMMUNITY_PAGE_SIZE_QUERY,
         includeLogo: INCLUDE_LOGO,
         includeScreenshots: INCLUDE_SCREENSHOTS,
-        dataSourceSlugIn: ds.type,
+        dataSourceSlugIn: ds?.type,
         filter: debouncedSearchQuery.trim() || undefined,
       });
 
       // Track search if query is present
       if (debouncedSearchQuery.trim()) {
         DashboardLibraryInteractions.searchPerformed({
-          datasourceTypes: [ds.type],
+          datasourceTypes: ds?.type ? [ds.type] : [],
           sourceEntryPoint: SOURCE_ENTRY_POINTS.DATASOURCE_PAGE,
           eventLocation: EVENT_LOCATIONS.MODAL_COMMUNITY_TAB,
           hasResults: apiResponse.items.length > 0,
@@ -94,7 +87,7 @@ export const CommunityDashboardSection = ({ onShowMapping, datasourceType }: Pro
 
       return {
         dashboards: apiResponse.items.slice(0, COMMUNITY_RESULT_SIZE),
-        datasourceType: ds.type,
+        datasourceType: ds?.type || '',
       };
     } catch (err) {
       console.error('Error loading community dashboards', err);
@@ -108,7 +101,7 @@ export const CommunityDashboardSection = ({ onShowMapping, datasourceType }: Pro
       DashboardLibraryInteractions.loaded({
         numberOfItems: response.dashboards.length,
         contentKinds: [CONTENT_KINDS.COMMUNITY_DASHBOARD],
-        datasourceTypes: [response.datasourceType],
+        datasourceTypes: response.datasourceType ? [response.datasourceType] : [],
         sourceEntryPoint: SOURCE_ENTRY_POINTS.DATASOURCE_PAGE,
         eventLocation: EVENT_LOCATIONS.MODAL_COMMUNITY_TAB,
       });
@@ -132,7 +125,7 @@ export const CommunityDashboardSection = ({ onShowMapping, datasourceType }: Pro
       // Track item click
       DashboardLibraryInteractions.itemClicked({
         contentKind: CONTENT_KINDS.COMMUNITY_DASHBOARD,
-        datasourceTypes: [response.datasourceType],
+        datasourceTypes: response.datasourceType ? [response.datasourceType] : [],
         libraryItemId: String(dashboard.id),
         libraryItemTitle: dashboard.name,
         sourceEntryPoint: SOURCE_ENTRY_POINTS.DATASOURCE_PAGE,
