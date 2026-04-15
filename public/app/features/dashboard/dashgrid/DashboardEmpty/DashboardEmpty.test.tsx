@@ -3,6 +3,7 @@ import { render } from 'test/test-utils';
 
 import { config, locationService, reportInteraction } from '@grafana/runtime';
 import { defaultDashboard } from '@grafana/schema';
+import { DashboardScene } from 'app/features/dashboard-scene/scene/DashboardScene';
 
 import { createDashboardModelFixture } from '../../state/__fixtures__/dashboardFixtures';
 import { onCreateNewPanel, onImportDashboard, onAddLibraryPanel } from '../../utils/dashboard';
@@ -96,6 +97,7 @@ it('renders with all buttons enabled when canCreate is true', () => {
   expect(screen.getByRole('button', { name: 'Add visualization' })).not.toBeDisabled();
   expect(screen.getByRole('button', { name: 'Import dashboard' })).not.toBeDisabled();
   expect(screen.getByRole('button', { name: 'Add library panel' })).not.toBeDisabled();
+  expect(screen.getByRole('button', { name: 'View examples' })).not.toBeDisabled();
 });
 
 it('renders with all buttons disabled when canCreate is false', () => {
@@ -104,6 +106,7 @@ it('renders with all buttons disabled when canCreate is false', () => {
   expect(screen.getByRole('button', { name: 'Add visualization' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Import dashboard' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Add library panel' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'View examples' })).not.toBeDisabled();
 });
 
 it('creates new visualization when clicked Add visualization', () => {
@@ -151,6 +154,23 @@ it('adds a library panel when clicked Add library panel', () => {
   expect(onAddLibraryPanel).toHaveBeenCalled();
 });
 
+it('opens examples when clicked View examples', () => {
+  setup();
+
+  act(() => {
+    fireEvent.click(screen.getByRole('button', { name: 'View examples' }));
+  });
+
+  expect(reportInteraction).toHaveBeenCalledWith('dashboards_emptydashboard_clicked', {
+    item: 'quick_start_examples',
+    isDynamicDashboard: false,
+  });
+  expect(locationService.partial).toHaveBeenCalledWith({
+    dashboardLibraryModal: 'open',
+    dashboardLibraryTab: 'community',
+  });
+});
+
 it('renders page without Add Widget button when feature flag is disabled', () => {
   setup();
 
@@ -173,6 +193,24 @@ it('renders with buttons disabled when repository is read-only', () => {
   expect(screen.getByRole('button', { name: 'Add visualization' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Import dashboard' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Add library panel' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'View examples' })).not.toBeDisabled();
+});
+
+it('renders quick start card in new layout empty state', () => {
+  config.featureToggles.dashboardNewLayouts = true;
+  try {
+    const dashboard = new DashboardScene({
+      isEditing: true,
+      meta: {},
+    });
+
+    render(<DashboardEmpty dashboard={dashboard} canCreate={true} />);
+
+    expect(screen.getByText('Quick start with examples')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View examples' })).toBeInTheDocument();
+  } finally {
+    config.featureToggles.dashboardNewLayouts = false;
+  }
 });
 
 describe('ProvisionedDashboardsEmptyPage feature toggle', () => {
