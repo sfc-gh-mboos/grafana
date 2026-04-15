@@ -94,7 +94,7 @@ export const useOnOpenExamples = () => {
   return useMemo(
     () => () => {
       DashboardInteractions.emptyDashboardButtonClicked({ item: 'quick_start_examples' });
-      window.open('https://grafana.com/grafana/dashboards/', '_blank', 'noopener,noreferrer');
+      locationService.partial({ dashboardLibraryModal: 'open', dashboardLibraryTab: 'community' });
     },
     []
   );

@@ -12,6 +12,7 @@ import { DashboardScene } from 'app/features/dashboard-scene/scene/DashboardScen
 
 import { BasicProvisionedDashboardsEmptyPage } from '../DashboardLibrary/BasicProvisionedDashboardsEmptyPage';
 import { SuggestedDashboards } from '../DashboardLibrary/SuggestedDashboards';
+import { SuggestedDashboardsModal } from '../DashboardLibrary/SuggestedDashboardsModal';
 
 import { DashboardEmptyExtensionPoint } from './DashboardEmptyExtensionPoint';
 import {
@@ -38,8 +39,19 @@ const InternalDashboardEmpty = ({
   onOpenExamples,
 }: InternalProps) => {
   const styles = useStyles2(getStyles);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const dashboardLibraryDatasourceUid = searchParams.get('dashboardLibraryDatasourceUid');
+  const showLibraryModal = searchParams.get('dashboardLibraryModal') === 'open';
+  const shouldRenderSuggestedDashboards =
+    config.featureToggles.suggestedDashboards && config.featureToggles.dashboardLibrary && Boolean(dashboardLibraryDatasourceUid);
+  const onDismissLibraryModal = useCallback(() => {
+    setSearchParams((params) => {
+      const newParams = new URLSearchParams(params);
+      newParams.delete('dashboardLibraryModal');
+      newParams.delete('dashboardLibraryTab');
+      return newParams;
+    });
+  }, [setSearchParams]);
 
   return (
     <>
@@ -69,6 +81,9 @@ const InternalDashboardEmpty = ({
           )}
         </div>
       </Stack>
+      {!shouldRenderSuggestedDashboards && (
+        <SuggestedDashboardsModal isOpen={showLibraryModal} onDismiss={onDismissLibraryModal} defaultTab="community" />
+      )}
     </>
   );
 };
@@ -246,7 +261,7 @@ const QuickStartExamplesCard = ({ onOpenExamples }: { onOpenExamples?: () => voi
       <Box marginBottom={2}>
         <Text element="p" textAlignment="center" color="secondary">
           <Trans i18nKey="dashboard.empty.quick-start-with-examples-body">
-            Browse example dashboards and start from a ready-made template for common use cases.
+            Browse suggested dashboards and start from a ready-made template for common use cases.
           </Trans>
         </Text>
       </Box>

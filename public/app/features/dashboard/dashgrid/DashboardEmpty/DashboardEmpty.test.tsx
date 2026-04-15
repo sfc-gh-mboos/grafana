@@ -3,7 +3,6 @@ import { render } from 'test/test-utils';
 
 import { config, locationService, reportInteraction } from '@grafana/runtime';
 import { defaultDashboard } from '@grafana/schema';
-
 import { DashboardScene } from 'app/features/dashboard-scene/scene/DashboardScene';
 
 import { createDashboardModelFixture } from '../../state/__fixtures__/dashboardFixtures';
@@ -156,7 +155,6 @@ it('adds a library panel when clicked Add library panel', () => {
 });
 
 it('opens examples when clicked View examples', () => {
-  const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
   setup();
 
   act(() => {
@@ -167,8 +165,10 @@ it('opens examples when clicked View examples', () => {
     item: 'quick_start_examples',
     isDynamicDashboard: false,
   });
-  expect(openSpy).toHaveBeenCalledWith('https://grafana.com/grafana/dashboards/', '_blank', 'noopener,noreferrer');
-  openSpy.mockRestore();
+  expect(locationService.partial).toHaveBeenCalledWith({
+    dashboardLibraryModal: 'open',
+    dashboardLibraryTab: 'community',
+  });
 });
 
 it('renders page without Add Widget button when feature flag is disabled', () => {
