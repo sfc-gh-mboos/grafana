@@ -95,6 +95,20 @@ func TestToDashboardErrorResponse(t *testing.T) {
 		},
 		// --- Kubernetes status errors ---
 		{
+			name:        "kubernetes conflict status error returns version mismatch payload",
+			pluginStore: pluginStoreWithoutPlugin,
+			input: &k8sErrors.StatusError{
+				ErrStatus: metav1.Status{
+					Code:    http.StatusConflict,
+					Message: "write conflict",
+				},
+			},
+			want: response.JSON(http.StatusConflict, util.DynMap{
+				"status":  dashboards.ErrDashboardVersionMismatch.Status,
+				"message": "write conflict",
+			}),
+		},
+		{
 			name:        "kubernetes status error",
 			pluginStore: pluginStoreWithoutPlugin,
 			input: &k8sErrors.StatusError{

@@ -53,6 +53,18 @@ func ToDashboardErrorResponse(ctx context.Context, pluginStore pluginstore.Store
 	// --- Kubernetes status errors ---
 	var statusErr *apierrors.StatusError
 	if errors.As(err, &statusErr) {
+		if statusErr.ErrStatus.Code == http.StatusConflict {
+			message := statusErr.ErrStatus.Message
+			if message == "" {
+				message = dashboards.ErrDashboardVersionMismatch.Error()
+			}
+
+			return response.JSON(http.StatusConflict, util.DynMap{
+				"status":  dashboards.ErrDashboardVersionMismatch.Status,
+				"message": message,
+			})
+		}
+
 		return response.Error(int(statusErr.ErrStatus.Code), statusErr.ErrStatus.Message, err)
 	}
 
