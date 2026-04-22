@@ -34,7 +34,7 @@ var (
 	}
 	ErrDashboardVersionMismatch = dashboardaccess.DashboardErr{
 		Reason:     "The dashboard has been changed by someone else",
-		StatusCode: 412,
+		StatusCode: 409,
 		Status:     "version-mismatch",
 	}
 	ErrDashboardTitleEmpty = dashboardaccess.DashboardErr{
