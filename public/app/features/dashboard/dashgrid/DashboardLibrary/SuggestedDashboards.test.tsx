@@ -99,6 +99,22 @@ describe('SuggestedDashboards', () => {
     });
   });
 
+  it('should show an error alert when loading suggested dashboards fails', async () => {
+    mockFetchProvisionedDashboards.mockRejectedValue(new Error('Network error'));
+    mockFetchCommunityDashboards.mockResolvedValue({
+      page: 1,
+      pages: 1,
+      items: [],
+    });
+
+    render(<SuggestedDashboards datasourceUid="test-uid" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('suggested-dashboards-load-error')).toBeInTheDocument();
+      expect(screen.getByText('Network error')).toBeInTheDocument();
+    });
+  });
+
   it('should render provisioned dashboard cards', async () => {
     const provisionedDashboard = createMockPluginDashboard({ title: 'Provisioned Dashboard 1' });
     mockFetchProvisionedDashboards.mockResolvedValue([provisionedDashboard]);

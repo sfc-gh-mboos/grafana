@@ -463,7 +463,7 @@ func TestIntegrationDashboardAPIEndpoint(t *testing.T) {
 				{SaveError: dashboards.ErrDashboardNotFound, ExpectedStatusCode: http.StatusNotFound},
 				{SaveError: dashboards.ErrFolderNotFound, ExpectedStatusCode: http.StatusBadRequest},
 				{SaveError: dashboards.ErrDashboardWithSameUIDExists, ExpectedStatusCode: http.StatusBadRequest},
-				{SaveError: dashboards.ErrDashboardVersionMismatch, ExpectedStatusCode: http.StatusPreconditionFailed},
+				{SaveError: dashboards.ErrDashboardVersionMismatch, ExpectedStatusCode: http.StatusConflict},
 				{SaveError: dashboards.ErrDashboardTitleEmpty, ExpectedStatusCode: http.StatusBadRequest},
 				{SaveError: dashboards.ErrDashboardFolderCannotHaveParent, ExpectedStatusCode: http.StatusBadRequest},
 				{SaveError: dashboards.ErrDashboardTypeMismatch, ExpectedStatusCode: http.StatusBadRequest},

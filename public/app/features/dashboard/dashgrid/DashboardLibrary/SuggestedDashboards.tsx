@@ -7,6 +7,7 @@ import { GrafanaTheme2 } from '@grafana/data';
 import { Trans, t } from '@grafana/i18n';
 import { getDataSourceSrv, locationService } from '@grafana/runtime';
 import { Button, useStyles2, Grid, Alert } from '@grafana/ui';
+import { getMessageFromError } from 'app/core/utils/errors';
 import { PluginDashboard } from 'app/types/plugins';
 
 import { DashboardCard } from './DashboardCard';
@@ -72,7 +73,7 @@ export const SuggestedDashboards = ({ datasourceUid }: Props) => {
     return ds?.type || '';
   }, [datasourceUid]);
 
-  const { value: result, loading } = useAsync(async (): Promise<SuggestedDashboardsResult> => {
+  const { value: result, loading, error: loadError } = useAsync(async (): Promise<SuggestedDashboardsResult> => {
     if (!datasourceUid) {
       return { dashboards: [], hasMoreDashboards: false };
     }
@@ -82,63 +83,55 @@ export const SuggestedDashboards = ({ datasourceUid }: Props) => {
       return { dashboards: [], hasMoreDashboards: false };
     }
 
-    try {
-      // Fetch both provisioned and community dashboards in parallel
-      const [provisioned, communityResponse] = await Promise.all([
-        // Fetch provisioned dashboards
-        fetchProvisionedDashboards(ds.type),
+    // Fetch both provisioned and community dashboards in parallel
+    const [provisioned, communityResponse] = await Promise.all([
+      fetchProvisionedDashboards(ds.type),
+      fetchCommunityDashboards({
+        orderBy: DEFAULT_SORT_ORDER,
+        direction: DEFAULT_SORT_DIRECTION,
+        page: 1,
+        pageSize: COMMUNITY_PAGE_SIZE_QUERY,
+        includeScreenshots: INCLUDE_SCREENSHOTS,
+        dataSourceSlugIn: ds.type,
+        includeLogo: INCLUDE_LOGO,
+      }),
+    ]);
 
-        // Fetch community dashboards
-        fetchCommunityDashboards({
-          orderBy: DEFAULT_SORT_ORDER,
-          direction: DEFAULT_SORT_DIRECTION,
-          page: 1,
-          pageSize: COMMUNITY_PAGE_SIZE_QUERY,
-          includeScreenshots: INCLUDE_SCREENSHOTS,
-          dataSourceSlugIn: ds.type,
-          includeLogo: INCLUDE_LOGO,
-        }),
-      ]);
+    const community = communityResponse.items.slice(0, COMMUNITY_RESULT_SIZE);
 
-      const community = communityResponse.items.slice(0, COMMUNITY_RESULT_SIZE);
+    // Mix: 1 provisioned + 2 community
+    const mixed: MixedDashboard[] = [];
 
-      // Mix: 1 provisioned + 2 community
-      const mixed: MixedDashboard[] = [];
-
-      // Take 1 provisioned if available
-      if (provisioned.length > 0) {
-        mixed.push({ type: 'provisioned', dashboard: provisioned[0], index: 0 });
-      }
-
-      // Take up to 2 community dashboards
-      const communityCount = Math.min(2, community.length);
-      for (let i = 0; i < communityCount; i++) {
-        mixed.push({ type: 'community', dashboard: community[i] });
-      }
-
-      // Fill remaining slots if we have less than 3
-      while (mixed.length < 3) {
-        const provisionedUsed = mixed.filter((m) => m.type === 'provisioned').length;
-        const communityUsed = mixed.filter((m) => m.type === 'community').length;
-
-        if (provisionedUsed < provisioned.length) {
-          mixed.push({ type: 'provisioned', dashboard: provisioned[provisionedUsed], index: provisionedUsed });
-        } else if (communityUsed < community.length) {
-          mixed.push({ type: 'community', dashboard: community[communityUsed] });
-        } else {
-          break; // Not enough dashboards
-        }
-      }
-
-      // Determine if there are more dashboards available beyond what we're showing
-      // Show "View all" if: more than 1 provisioned exists OR we got the full page size of community dashboards
-      const hasMoreDashboards = provisioned.length > 1 || community.length > MAX_SUGGESTED_DASHBOARDS_PREVIEW;
-
-      return { dashboards: mixed, hasMoreDashboards };
-    } catch (error) {
-      console.error('Error loading suggested dashboards', error);
-      return { dashboards: [], hasMoreDashboards: false };
+    // Take 1 provisioned if available
+    if (provisioned.length > 0) {
+      mixed.push({ type: 'provisioned', dashboard: provisioned[0], index: 0 });
     }
+
+    // Take up to 2 community dashboards
+    const communityCount = Math.min(2, community.length);
+    for (let i = 0; i < communityCount; i++) {
+      mixed.push({ type: 'community', dashboard: community[i] });
+    }
+
+    // Fill remaining slots if we have less than 3
+    while (mixed.length < 3) {
+      const provisionedUsed = mixed.filter((m) => m.type === 'provisioned').length;
+      const communityUsed = mixed.filter((m) => m.type === 'community').length;
+
+      if (provisionedUsed < provisioned.length) {
+        mixed.push({ type: 'provisioned', dashboard: provisioned[provisionedUsed], index: provisionedUsed });
+      } else if (communityUsed < community.length) {
+        mixed.push({ type: 'community', dashboard: community[communityUsed] });
+      } else {
+        break; // Not enough dashboards
+      }
+    }
+
+    // Determine if there are more dashboards available beyond what we're showing
+    // Show "View all" if: more than 1 provisioned exists OR we got the full page size of community dashboards
+    const hasMoreDashboards = provisioned.length > 1 || community.length > MAX_SUGGESTED_DASHBOARDS_PREVIEW;
+
+    return { dashboards: mixed, hasMoreDashboards };
   }, [datasourceUid]);
 
   // Determine which tab should be default based on available data
@@ -268,9 +261,55 @@ export const SuggestedDashboards = ({ datasourceUid }: Props) => {
     [datasourceUid, onShowMapping]
   );
 
-  // Don't render if no dashboards or still loading
-  if (!loading && (!result || result.dashboards.length === 0)) {
+  // Don't render if no dashboards or still loading (unless load failed — show error below)
+  if (!loading && !loadError && (!result || result.dashboards.length === 0)) {
     return null;
+  }
+
+  if (loadError && !loading) {
+    return (
+      <>
+        <div className={styles.container} data-testid="suggested-dashboards">
+          <div className={styles.header}>
+            <div className={styles.headerText}>
+              <h1 className={styles.title}>
+                {datasourceType
+                  ? t(
+                      'dashboard-library.suggested-dashboards-title-with-datasource',
+                      'Build a dashboard using suggested options for your {{datasourceType}} data source',
+                      { datasourceType }
+                    )
+                  : t(
+                      'dashboard-library.suggested-dashboards-title',
+                      'Build a dashboard using suggested options for your selected data source'
+                    )}
+              </h1>
+              <p className={styles.subtitle}>
+                <Trans i18nKey="dashboard-library.suggested-dashboards-subtitle">
+                  Browse and select from data-source provided or community dashboards
+                </Trans>
+              </p>
+            </div>
+          </div>
+          <Alert
+            title={t(
+              'dashboard-library.suggested-dashboards-load-error-title',
+              'Could not load suggested dashboards'
+            )}
+            severity="error"
+            data-testid="suggested-dashboards-load-error"
+          >
+            {getMessageFromError(loadError)}
+          </Alert>
+        </div>
+        <SuggestedDashboardsModal
+          isOpen={showLibraryModal}
+          onDismiss={onModalDismiss}
+          initialMappingContext={mappingContext}
+          defaultTab={defaultTab}
+        />
+      </>
+    );
   }
 
   return (
