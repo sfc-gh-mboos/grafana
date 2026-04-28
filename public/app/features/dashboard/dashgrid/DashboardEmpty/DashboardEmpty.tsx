@@ -12,7 +12,6 @@ import { DashboardScene } from 'app/features/dashboard-scene/scene/DashboardScen
 
 import { BasicProvisionedDashboardsEmptyPage } from '../DashboardLibrary/BasicProvisionedDashboardsEmptyPage';
 import { SuggestedDashboards } from '../DashboardLibrary/SuggestedDashboards';
-import { SuggestedDashboardsModal } from '../DashboardLibrary/SuggestedDashboardsModal';
 
 import { DashboardEmptyExtensionPoint } from './DashboardEmptyExtensionPoint';
 import {
@@ -20,7 +19,6 @@ import {
   useOnAddVisualization,
   useOnAddLibraryPanel,
   useOnImportDashboard,
-  useOnOpenExamples,
 } from './DashboardEmptyHooks';
 
 interface InternalProps {
@@ -28,7 +26,6 @@ interface InternalProps {
   onAddVisualization?: () => void;
   onAddLibraryPanel?: () => void;
   onImportDashboard?: () => void;
-  onOpenExamples?: () => void;
 }
 
 const InternalDashboardEmpty = ({
@@ -36,22 +33,10 @@ const InternalDashboardEmpty = ({
   onAddVisualization,
   onAddLibraryPanel,
   onImportDashboard,
-  onOpenExamples,
 }: InternalProps) => {
   const styles = useStyles2(getStyles);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const dashboardLibraryDatasourceUid = searchParams.get('dashboardLibraryDatasourceUid');
-  const showLibraryModal = searchParams.get('dashboardLibraryModal') === 'open';
-  const shouldRenderSuggestedDashboards =
-    config.featureToggles.suggestedDashboards && config.featureToggles.dashboardLibrary && Boolean(dashboardLibraryDatasourceUid);
-  const onDismissLibraryModal = useCallback(() => {
-    setSearchParams((params) => {
-      const newParams = new URLSearchParams(params);
-      newParams.delete('dashboardLibraryModal');
-      newParams.delete('dashboardLibraryTab');
-      return newParams;
-    });
-  }, [setSearchParams]);
 
   return (
     <>
@@ -68,7 +53,6 @@ const InternalDashboardEmpty = ({
               dashboard={dashboard}
               styles={styles}
               dashboardLibraryDatasourceUid={dashboardLibraryDatasourceUid}
-              onOpenExamples={onOpenExamples}
             />
           ) : (
             <OldLayoutEmpty
@@ -76,14 +60,10 @@ const InternalDashboardEmpty = ({
               onAddVisualization={onAddVisualization}
               onAddLibraryPanel={onAddLibraryPanel}
               onImportDashboard={onImportDashboard}
-              onOpenExamples={onOpenExamples}
             />
           )}
         </div>
       </Stack>
-      {!shouldRenderSuggestedDashboards && (
-        <SuggestedDashboardsModal isOpen={showLibraryModal} onDismiss={onDismissLibraryModal} defaultTab="community" />
-      )}
     </>
   );
 };
@@ -115,10 +95,9 @@ interface NewLayoutEmptyProps {
     appsIcon: string;
   };
   dashboardLibraryDatasourceUid: string | null;
-  onOpenExamples?: () => void;
 }
 
-const NewLayoutEmpty = ({ dashboard, styles, dashboardLibraryDatasourceUid, onOpenExamples }: NewLayoutEmptyProps) => {
+const NewLayoutEmpty = ({ dashboard, styles, dashboardLibraryDatasourceUid }: NewLayoutEmptyProps) => {
   const { uid, isEditing, editPane } = dashboard.state;
   const isEditingNewDashboard = isEditing && !uid;
 
@@ -145,7 +124,6 @@ const NewLayoutEmpty = ({ dashboard, styles, dashboardLibraryDatasourceUid, onOp
           </Text>
         </Box>
       </Box>
-      <QuickStartExamplesCard onOpenExamples={onOpenExamples} />
       <DashboardExtensionsComponents dashboardLibraryDatasourceUid={dashboardLibraryDatasourceUid} />
     </Stack>
   );
@@ -156,14 +134,12 @@ interface OldLayoutEmptyProps {
   onAddVisualization?: () => void;
   onAddLibraryPanel?: () => void;
   onImportDashboard?: () => void;
-  onOpenExamples?: () => void;
 }
 const OldLayoutEmpty = ({
   dashboardLibraryDatasourceUid,
   onAddVisualization,
   onAddLibraryPanel,
   onImportDashboard,
-  onOpenExamples,
 }: OldLayoutEmptyProps) => (
   <Stack alignItems="stretch" justifyContent="center" gap={4} direction="column">
     <Box borderRadius="lg" borderColor="strong" borderStyle="dashed" padding={4}>
@@ -246,36 +222,8 @@ const OldLayoutEmpty = ({
           </Button>
         </Stack>
       </Box>
-      <QuickStartExamplesCard onOpenExamples={onOpenExamples} />
     </Stack>
   </Stack>
-);
-
-const QuickStartExamplesCard = ({ onOpenExamples }: { onOpenExamples?: () => void }) => (
-  <Box borderRadius="lg" borderColor="strong" borderStyle="dashed" padding={3} flex={1}>
-    <Stack direction="column" alignItems="center" gap={1}>
-      <Icon name="apps" size="xl" />
-      <Text element="h3" textAlignment="center" weight="medium">
-        <Trans i18nKey="dashboard.empty.quick-start-with-examples-header">Quick start with examples</Trans>
-      </Text>
-      <Box marginBottom={2}>
-        <Text element="p" textAlignment="center" color="secondary">
-          <Trans i18nKey="dashboard.empty.quick-start-with-examples-body">
-            Browse suggested dashboards and start from a ready-made template for common use cases.
-          </Trans>
-        </Text>
-      </Box>
-      <Button
-        icon="arrow-right"
-        fill="outline"
-        data-testid={selectors.pages.AddDashboard.itemButton('Quick start with examples button')}
-        onClick={onOpenExamples}
-        disabled={!onOpenExamples}
-      >
-        <Trans i18nKey="dashboard.empty.quick-start-with-examples-button">View examples</Trans>
-      </Button>
-    </Stack>
-  </Box>
 );
 
 export interface Props {
@@ -290,7 +238,6 @@ const DashboardEmpty = (props: Props) => {
   const onAddVisualization = useOnAddVisualization({ ...props, isReadOnlyRepo, isProvisioned });
   const onAddLibraryPanel = useOnAddLibraryPanel({ ...props, isReadOnlyRepo, isProvisioned });
   const onImportDashboard = useOnImportDashboard({ ...props, isReadOnlyRepo, isProvisioned });
-  const onOpenExamples = useOnOpenExamples();
 
   return (
     <DashboardEmptyExtensionPoint
@@ -301,10 +248,9 @@ const DashboardEmpty = (props: Props) => {
             onAddVisualization={onAddVisualization}
             onAddLibraryPanel={onAddLibraryPanel}
             onImportDashboard={onImportDashboard}
-            onOpenExamples={onOpenExamples}
           />
         ),
-        [onAddVisualization, onAddLibraryPanel, onImportDashboard, onOpenExamples, props.dashboard]
+        [onAddVisualization, onAddLibraryPanel, onImportDashboard, props.dashboard]
       )}
       onAddVisualization={onAddVisualization}
       onAddLibraryPanel={onAddLibraryPanel}

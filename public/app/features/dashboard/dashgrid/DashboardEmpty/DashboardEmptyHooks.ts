@@ -89,13 +89,3 @@ export const useOnImportDashboard = ({ canCreate, isReadOnlyRepo, isProvisioned 
     };
   }, [canCreate, isReadOnlyRepo, isProvisioned]);
 };
-
-export const useOnOpenExamples = () => {
-  return useMemo(
-    () => () => {
-      DashboardInteractions.emptyDashboardButtonClicked({ item: 'quick_start_examples' });
-      locationService.partial({ dashboardLibraryModal: 'open', dashboardLibraryTab: 'community' });
-    },
-    []
-  );
-};
